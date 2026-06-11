@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import ForeignKey, String, Text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSON, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.api.models.base import Base, now_tz, uuid_pk
@@ -21,6 +21,7 @@ class BusinessCard(Base):
     )
     image_ref: Mapped[str] = mapped_column(Text, nullable=False)
     raw_ocr_text: Mapped[str | None] = mapped_column(Text)
+    fields_json: Mapped[dict | None] = mapped_column(JSON)
     confidence: Mapped[float | None] = mapped_column()
     language: Mapped[str | None] = mapped_column(String(10))
     status: Mapped[str] = mapped_column(String(20), default="pending", nullable=False)
