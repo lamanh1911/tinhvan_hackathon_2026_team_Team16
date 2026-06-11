@@ -1,0 +1,40 @@
+# PRD: [Feature or Initiative Name]
+
+**Date:** YYYY-MM-DD
+**Author:**
+**Status:** Draft / Review / Approved
+
+## Problem Statement
+
+What problem does this solve? Who is affected?
+
+## Goals
+
+| Goal | Metric | Target |
+|---|---|---|
+| Goal 1 | How measured | Value |
+
+## Out of Scope
+
+What this does not cover.
+
+## User Stories
+
+- As a [role], I want [action], so that [benefit].
+
+## Functional Requirements
+
+| ID | Requirement | Priority |
+|---|---|---|
+| FR-XX | Description | Must / Should |
+
+## Non-functional Requirements
+
+| ID | Requirement |
+|---|---|
+| NFR-XX | Description |
+
+## Open Questions
+
+- Question 1
+- Question 2

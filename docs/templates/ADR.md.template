@@ -1,0 +1,31 @@
+# ADR-XXX: [Decision Title]
+
+**Date:** YYYY-MM-DD
+**Status:** Proposed / Accepted / Deprecated / Superseded by ADR-XXX
+
+## Context
+
+What is the situation that requires a decision? What forces are at play?
+
+## Decision
+
+What was decided?
+
+## Rationale
+
+Why was this chosen over alternatives?
+
+## Alternatives Considered
+
+| Option | Pros | Cons | Reason rejected |
+|---|---|---|---|
+| Option A | | | |
+| Option B | | | |
+
+## Consequences
+
+What becomes easier or harder as a result of this decision?
+
+## References
+
+- Link to relevant docs

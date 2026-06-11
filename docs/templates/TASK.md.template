@@ -1,0 +1,47 @@
+# TASK: [Feature Name]
+
+**FR Reference:** FR-XX
+**Priority:** Must / Should / Could
+**Agent:** frontend-engineer / backend-engineer / database-engineer
+**Status:** Pending / In Progress / Done
+
+## Description
+
+Brief description of what needs to be built.
+
+## Acceptance Criteria
+
+- [ ] Criterion 1
+- [ ] Criterion 2
+- [ ] Criterion 3
+
+## Technical Approach
+
+Short description of the implementation approach.
+
+## Files to Create / Modify
+
+- `src/api/routers/...` — [reason]
+- `src/api/services/...` — [reason]
+- `src/components/...` — [reason]
+
+## Database Changes
+
+Migration needed: Yes / No
+
+If yes, describe the schema change.
+
+## API Changes
+
+| Method | Path | Change |
+|---|---|---|
+| POST | `/endpoint` | New endpoint |
+
+## Dependencies
+
+- Depends on: T-XX (must be done first)
+- Blocks: T-XX
+
+## Notes
+
+Any additional context, constraints, or design decisions.
