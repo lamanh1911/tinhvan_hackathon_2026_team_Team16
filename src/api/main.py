@@ -2,7 +2,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.config import get_settings
+from src.api.exceptions import AppError, app_error_handler
 from src.api.routers import health
+from src.api.routers import cards
 
 settings = get_settings()
 
@@ -21,4 +23,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.add_exception_handler(AppError, app_error_handler)
+
 app.include_router(health.router)
+app.include_router(cards.router)

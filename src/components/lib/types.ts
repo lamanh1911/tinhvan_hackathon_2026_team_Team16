@@ -50,6 +50,28 @@ export interface BusinessCard {
   created_at: string
 }
 
+export interface CardFields {
+  name: FieldWithConfidence
+  company: FieldWithConfidence
+  title: FieldWithConfidence
+  email: FieldWithConfidence
+  phone: FieldWithConfidence
+  address: FieldWithConfidence
+}
+
+export interface CardScanResponse {
+  id: string
+  status: string
+  fields: CardFields
+  created_at: string
+}
+
+export interface CardConfirmResponse {
+  id: string
+  customer_id: string
+  status: string
+}
+
 export interface Meeting {
   id: string
   customer_id: string
