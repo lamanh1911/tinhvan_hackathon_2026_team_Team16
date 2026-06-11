@@ -1,55 +1,432 @@
 ---
 name: frontend-design
-description: Guidance for distinctive, intentional visual design when building new UI or reshaping an existing one. Helps with aesthetic direction, typography, and making choices that don't read as templated defaults.
-license: Complete terms in LICENSE.txt
+description: Relay App design system for AI Sales Follow-up Assistant. Use when building any screen, component, or layout in src/components/. Covers Relay color tokens, typography, spacing, component patterns, and per-feature UX rules. Single source of truth for all UI decisions.
+metadata:
+  type: project-skill
+  version: "2.0.0"
 ---
 
-# Frontend Design
+# Frontend Design — Relay App Design System
 
-Approach this as the design lead at a small studio known for giving every client a visual identity that could not be mistaken for anyone else's. This client has already rejected proposals that felt templated, and is paying for a distinctive point of view: make deliberate, opinionated choices about palette, typography, and layout that are specific to this brief, and take one real aesthetic risk you can justify.
+Single source of truth for all UI work in `src/components/`.
+Read this before building any screen or component. Do not duplicate with `ui-designer` (deleted).
 
-## Ground it in the subject
+## Design Token Reference
 
-If the brief does not pin down what the product or subject is, pin it yourself before designing: name one concrete subject, its audience, and the page's single job, and state your choice. If there's any information in your memory about the human's preferences, context about what they're building, or designs you've made before – use that as a hint. The subject's own world, its materials, instruments, artifacts, and vernacular, is where distinctive choices come from. Build with the brief's real content and subject matter throughout.
+Full token definitions live in `.claude/rules/02-frontend-rules.md` → "Design System — Relay App" section.
+This skill references those tokens; it does not repeat them.
 
-## Design principles
+---
 
-For web designs, the hero is a thesis. Open with the most characteristic thing in the subject's world, in whatever form makes sense for it: a headline, an image, an animation, a live demo, an interactive moment. Be deliberate with your choice: a big number with a small label, supporting stats, and a gradient accent is the template answer, only use if that's truly the best option.
+## Component Mapping
 
-Typography carries the personality of the page. Pair the display and body faces deliberately, not the same families you would reach for on any other project, and set a clear type scale with intentional weights, widths, and spacing. Make the type treatment itself a memorable part of the design, not a neutral delivery vehicle for the content.
+Each pattern below maps to a file path in `src/components/`.
 
-Structure is information. Structural devices, numbering, eyebrows, dividers, labels, should encode something true about the content, not decorate it. Many generic designs use numbered markers (01 / 02 / 03), but that's only appropriate if the content actually is a sequence - like a real process or a typed timeline where order carries information the reader needs. Question if choices like numbered markers actually make sense before incorporating them.
+### Button
 
-Leverage motion deliberately. Think about where and if animation can serve the subject: a page-load sequence, a scroll-triggered reveal, hover micro-interactions, ambient atmosphere. An orchestrated moment usually lands harder than scattered effects; choose what the direction calls for. However, sometimes less is more, and extra animation contributes to the feeling that the design is AI-generated.
+```tsx
+// Primary
+<button className="bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 rounded-md text-sm font-medium transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed">
+  Label
+</button>
 
-Match complexity to the vision. Maximalist directions need elaborate execution; minimal directions need precision in spacing, type, and detail. Elegance is executing the chosen vision well.
+// Secondary
+<button className="bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 px-4 py-2 rounded-md text-sm font-medium transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed">
+  Label
+</button>
 
-Consider written content carefully. Often a design brief may not contain real content, and it's up to you to come up with copy. Copy can make a design feel as templated as the design itself. See the below section on writing for more guidance.
+// Danger
+<button className="bg-red-600 text-white hover:bg-red-700 px-4 py-2 rounded-md text-sm font-medium transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed">
+  Label
+</button>
 
-## Process: brainstorm, explore, plan, critique, build, critique again
+// Icon-only — always needs aria-label
+<button aria-label="Send email" className="p-2 rounded-md hover:bg-slate-100 transition-colors duration-150">
+  <PaperAirplaneIcon className="h-5 w-5 text-slate-600" />
+</button>
+```
 
-For calibration: AI-generated design right now clusters around three looks: (1) a warm cream background (near #F4F1EA) with a high-contrast serif display and a terracotta accent; (2) a near-black background with a single bright acid-green or vermilion accent; (3) a broadsheet-style layout with hairline rules, zero border-radius, and dense newspaper-like columns. All three are legitimate for some briefs, but they are defaults rather than choices, and they appear regardless of subject. Where the brief pins down a visual direction, follow it exactly — the brief's own words always win, including when it asks for one of these looks. Where it leaves an axis free, don't spend that freedom on one of these defaults. Just like a human designer who's hired, there's often a careful balance between doing what you're good at and taking each project as a chance to experiment and learn.
+### Card / Dashboard Card
 
-Work in two passes. First, brainstorm a short design plan based on the human's design brief: create a compact token system with color, type, layout, and signature. Color: describe the palette as 4–6 named hex values. Type: the typefaces for 2+ roles (a characterful display face that's used with restraint, a complementary body face, and a utility face for captions or data if needed). Layout: a layout concept, using one-sentence prose descriptions and ASCII wireframes to ideate and compare. Signature: the single unique element this page will be remembered by that embodies the brief in an appropriate way.
+```tsx
+// Standard card
+<div className="bg-white rounded-lg border border-slate-200 shadow-sm p-6">
+  <h2 className="text-lg font-medium text-slate-900 mb-4">Title</h2>
+  {children}
+</div>
 
-Then review that plan against the brief before building: if any part of it reads like the generic default you would produce for any similar page (work through a similar prompt to see if you arrive somewhere similar) rather than a choice made for this specific brief — revise that part, say what you changed and why. Only after you've confirmed the relative uniqueness of your design plan should you start to write the code, following the revised plan exactly and deriving every color and type decision from it.
+// Dashboard stat card
+<div className="bg-white rounded-lg border border-slate-200 shadow-sm p-6 flex flex-col gap-1">
+  <p className="text-xs text-slate-500 uppercase tracking-wide">Label</p>
+  <p className="text-2xl font-semibold text-slate-900">Value</p>
+</div>
+```
 
-When writing the code, be careful of structuring your CSS selector specificities. It's easy to generate CSS classes that cancel each other out (especially with a type-based selector like .section and a element-based selector like .cta). This can happen often with paddings/margins between sections.
+### Form Fields
 
-Try to do a lot of this planning and iteration in your thinking, and only show ideas to the user when you have higher confidence it'll delight them.
+```tsx
+// Text input
+<div className="space-y-1">
+  <label className="block text-sm font-medium text-slate-700">{label}</label>
+  <input
+    className="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm
+               focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none
+               disabled:bg-slate-100 disabled:text-slate-400 transition-colors duration-150"
+  />
+  <p className="text-xs text-slate-500">{helperText}</p>
+</div>
 
-## Restraint and self-critique
+// Flagged field (confidence < 0.7) — amber
+<input className="... border-amber-400 bg-amber-50 focus:border-amber-500 focus:ring-amber-500" />
+<p className="text-xs text-amber-600">Needs review — please verify this field</p>
 
-Spend your boldness in one place. Let the signature element be the one memorable thing, keep everything around it quiet and disciplined, and cut any decoration that does not serve the brief. Not taking a risk can be a risk itself! Build to a quality floor without announcing it: responsive down to mobile, visible keyboard focus, reduced motion respected. Critique your own work as you build, taking screenshots if your environment supports it – a picture is worth 1000 tokens. Consider Chanel's advice: before leaving the house, take a look in the mirror and remove one accessory. Human creators have memory and always try to do something new, so if you have a space to quickly jot down notes about what you've tried, it can help you in future passes.
+// Missing required field — red
+<input className="... border-red-400 bg-red-50 focus:border-red-500 focus:ring-red-500" />
+<p className="text-xs text-red-600">This field is required</p>
 
-## More on writing in design
+// Select
+<select className="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm
+                   focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none bg-white">
 
-Words appear in a design for one reason: to make it easier to understand, and therefore easier to use. They are design material, not decoration. Bring the same intentionality to copy that you would bring to spacing and color. Before writing anything, ask what the design needs to say, and how it can best be said to help the person navigate the experience.
+// Textarea
+<textarea className="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm
+                     focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none resize-none" />
 
-Write from the end user's side of the screen. Name things by what people control and recognize, never by how the system is built. A person manages notifications, not webhook config. Describe what something does in plain terms rather than selling it. Being specific is always better than being clever.
+// Checkbox
+<label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+  <input type="checkbox" className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+  {label}
+</label>
+```
 
-Use active voice as default. A control should say exactly what happens when it's used: "Save changes," not "Submit." An action keeps the same name through the whole flow, so the button that says "Publish" produces a toast that says "Published." The vocabulary of an interface is the signposting for someone navigating the product. Cohesion and consistency are how people learn their way around.
+### Table
 
-Treat failure and emptiness as moments for direction, not mood. Explain what went wrong and how to fix it, in the interface's voice rather than a person's. Errors don't apologize, and they are never vague about what happened. An empty screen is an invitation to act.
+```tsx
+<div className="overflow-hidden rounded-lg border border-slate-200">
+  <table className="min-w-full divide-y divide-slate-200">
+    <thead className="bg-slate-50">
+      <tr>
+        <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wide">
+          Column
+        </th>
+      </tr>
+    </thead>
+    <tbody className="divide-y divide-slate-100 bg-white">
+      <tr className="hover:bg-slate-50 transition-colors duration-150">
+        <td className="px-4 py-3 text-sm text-slate-900">Cell</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+```
 
-Keep the register conversational and tuned: plain verbs, sentence case, no filler, with tone matched to the brand and the audience. Let each element do exactly one job. A label labels, an example demonstrates, and nothing quietly does double duty.
+### Modal / Dialog
+
+```tsx
+// Overlay + dialog
+<div className="fixed inset-0 z-50 flex items-center justify-center">
+  <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={onClose} />
+  <div className="relative z-10 bg-white rounded-lg shadow-md w-full max-w-md p-6 space-y-4">
+    <h2 className="text-lg font-medium text-slate-900">Title</h2>
+    <div className="text-sm text-slate-600">{content}</div>
+    <div className="flex justify-end gap-3 pt-2">
+      <button className="... secondary ...">Cancel</button>
+      <button className="... primary ...">Confirm</button>
+    </div>
+  </div>
+</div>
+```
+
+### Confirmation Dialog
+
+Same as Modal but content is a single sentence question.
+Confirm button uses Danger variant when the action is destructive.
+
+### Status Badge
+
+`src/components/ui/StatusBadge.tsx`
+
+```tsx
+const STATUS_STYLES = {
+  draft:     'bg-amber-100 text-amber-800',
+  in_review: 'bg-blue-100 text-blue-800',
+  approved:  'bg-green-100 text-green-800',
+  sent:      'bg-slate-100 text-slate-700',
+  rejected:  'bg-red-100 text-red-800',
+} as const
+
+type Status = keyof typeof STATUS_STYLES
+
+const STATUS_LABELS: Record<Status, string> = {
+  draft: 'Draft', in_review: 'In Review', approved: 'Approved',
+  sent: 'Sent', rejected: 'Rejected',
+}
+
+export function StatusBadge({ status }: { status: Status }) {
+  return (
+    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${STATUS_STYLES[status]}`}>
+      {STATUS_LABELS[status]}
+    </span>
+  )
+}
+```
+
+### Confidence Indicator (FR-01)
+
+`src/components/ui/ConfidenceIndicator.tsx`
+
+```tsx
+export function ConfidenceIndicator({ confidence }: { confidence: number | null }) {
+  if (confidence === null) return <span className="text-xs font-medium text-red-600">Required</span>
+  if (confidence >= 0.7)   return <span className="text-xs font-medium text-green-600">Accepted</span>
+  return <span className="text-xs font-medium text-amber-600">Needs review</span>
+}
+```
+
+### Sidebar Navigation
+
+`src/components/layout/Sidebar.tsx`
+
+```tsx
+// Active item: blue-600 text + blue-50 bg
+// Inactive: slate-600 text, hover:bg-slate-50
+<nav className="w-64 bg-white border-r border-slate-200 h-full py-4">
+  <a href="/cards" className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium
+                               text-blue-600 bg-blue-50 rounded-md mx-2">
+    <IdentificationIcon className="h-5 w-5" />
+    Card Scan
+  </a>
+  <a href="/emails" className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium
+                                text-slate-600 hover:bg-slate-50 rounded-md mx-2 transition-colors">
+    <EnvelopeIcon className="h-5 w-5" />
+    Emails
+  </a>
+</nav>
+```
+
+Nav items (SVG icons only — no emoji):
+
+| Label | Route | Icon |
+|---|---|---|
+| Card Scan | `/cards` | `IdentificationIcon` |
+| Emails | `/emails` | `EnvelopeIcon` |
+| Schedule | `/schedule` | `CalendarIcon` |
+| Meetings | `/meetings` | `DocumentTextIcon` |
+
+### Top Navigation / Header
+
+```tsx
+<header className="h-[60px] bg-white border-b border-slate-200 flex items-center px-6 gap-4">
+  <span className="text-lg font-semibold text-slate-900">Relay</span>
+  <div className="flex-1" />
+  {/* Right side: user avatar or actions */}
+</header>
+```
+
+### Tabs
+
+```tsx
+<div className="border-b border-slate-200 flex gap-1">
+  {/* Active tab */}
+  <button className="px-4 py-2 text-sm font-medium text-blue-600 border-b-2 border-blue-600 -mb-px">
+    Tab Label
+  </button>
+  {/* Inactive tab */}
+  <button className="px-4 py-2 text-sm font-medium text-slate-500 hover:text-slate-700 border-b-2 border-transparent -mb-px transition-colors">
+    Tab Label
+  </button>
+</div>
+```
+
+### Search Bar
+
+```tsx
+<div className="relative">
+  <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+  <input
+    type="search"
+    placeholder="Search..."
+    className="w-full pl-9 pr-4 py-2 text-sm border border-slate-300 rounded-md
+               focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+  />
+</div>
+```
+
+### Toast / Feedback
+
+```tsx
+// Success
+<div role="status" className="flex items-center gap-3 bg-green-50 border border-green-200 text-green-800 rounded-lg px-4 py-3 text-sm shadow-sm">
+  <CheckCircleIcon className="h-5 w-5 text-green-600 shrink-0" />
+  {message}
+</div>
+
+// Error
+<div role="alert" className="flex items-center gap-3 bg-red-50 border border-red-200 text-red-800 rounded-lg px-4 py-3 text-sm shadow-sm">
+  <ExclamationCircleIcon className="h-5 w-5 text-red-600 shrink-0" />
+  {message}
+</div>
+```
+
+### Avatar / Profile Item
+
+```tsx
+// Avatar initials fallback
+<div className="h-8 w-8 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-semibold shrink-0">
+  {initials}
+</div>
+
+// Profile row (e.g., customer card header)
+<div className="flex items-center gap-3">
+  <Avatar initials={initials} />
+  <div>
+    <p className="text-sm font-medium text-slate-900">{name}</p>
+    <p className="text-xs text-slate-500">{company}</p>
+  </div>
+</div>
+```
+
+### Pagination
+
+```tsx
+<div className="flex items-center justify-between py-3 text-sm text-slate-600">
+  <p>Showing {from}–{to} of {total}</p>
+  <div className="flex gap-1">
+    <button className="px-3 py-1.5 border border-slate-300 rounded-md hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+      Previous
+    </button>
+    <button className="px-3 py-1.5 border border-slate-300 rounded-md hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+      Next
+    </button>
+  </div>
+</div>
+```
+
+### Empty State
+
+```tsx
+<div className="flex flex-col items-center justify-center py-16 text-center">
+  <SomeOutlineIcon className="h-12 w-12 text-slate-300 mb-4" />
+  <p className="text-sm font-medium text-slate-900 mb-1">No items yet</p>
+  <p className="text-xs text-slate-500 mb-4">Description of what to do next.</p>
+  <button className="... primary ...">Primary Action</button>
+</div>
+```
+
+### Loading State
+
+```tsx
+// Inline spinner
+<svg className="animate-spin h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24">
+  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+</svg>
+
+// Skeleton card
+<div className="bg-white rounded-lg border border-slate-200 p-6 animate-pulse space-y-3">
+  <div className="h-4 bg-slate-200 rounded w-1/3" />
+  <div className="h-3 bg-slate-100 rounded w-2/3" />
+  <div className="h-3 bg-slate-100 rounded w-1/2" />
+</div>
+```
+
+### Draft Action Buttons (State Machine)
+
+Buttons are enabled/disabled based on current draft status:
+
+```tsx
+// Approve — enabled in draft or in_review only
+<button
+  onClick={onApprove}
+  disabled={!['draft', 'in_review'].includes(status)}
+  className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium
+             hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+>
+  Approve
+</button>
+
+// Send — enabled only when approved
+<button
+  onClick={onSend}
+  disabled={status !== 'approved'}
+  className="bg-green-600 text-white px-4 py-2 rounded-md text-sm font-medium
+             hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+>
+  Send
+</button>
+```
+
+### Page Shell
+
+Standard wrapper for all feature pages:
+
+```tsx
+export default function PageShell({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="px-6 py-8 max-w-[1200px]">
+      <h1 className="text-2xl font-semibold text-slate-900 mb-6">{title}</h1>
+      {children}
+    </div>
+  )
+}
+```
+
+---
+
+## Screen UX Flows (per Feature)
+
+### FR-01 — Business Card Scan (`/cards`)
+
+1. `/cards` — upload page: drag-drop zone + "Upload and Scan" button
+2. `/cards/[id]` — field review: form with ConfidenceIndicator per field + StatusBadge (Draft) + "Confirm and Save" button (disabled if required fields missing or flagged red)
+
+### FR-02 — Thank-you Email Draft (`/emails`)
+
+1. `/emails` — list view: table of drafts with StatusBadge column
+2. `/emails/[id]` — draft view: editable textarea + StatusBadge + Approve/Send buttons (state machine)
+
+### FR-03 / FR-04 — Meeting Schedule Proposal (`/schedule`)
+
+1. `/schedule/[meetingId]` — calendar availability display + propose slots form
+2. Confirmation step before sending proposal
+
+### FR-05 — MOM Review (`/meetings`)
+
+1. `/meetings` — list: table of meetings with MOM status
+2. `/meetings/[id]` — MOM detail: summary + action items list + StatusBadge + Approve button
+
+### FR-06 — Follow-up Email Draft (`/emails`)
+
+Same routes as FR-02 but `type = follow_up`. AttachmentSuggestions component shown below the draft textarea.
+
+```tsx
+export function AttachmentSuggestions({ suggestions }: { suggestions: string[] }) {
+  return (
+    <div className="space-y-2">
+      <p className="text-sm font-medium text-slate-700">Suggested Attachments</p>
+      {suggestions.map((name) => (
+        <label key={name} className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer">
+          <input type="checkbox" className="rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+          {name}
+        </label>
+      ))}
+    </div>
+  )
+}
+```
+
+---
+
+## Rules (non-negotiable)
+
+- No emoji anywhere — buttons, labels, headings, toasts, badges, placeholders
+- All icons: SVG from `@heroicons/react` or `react-icons`
+- Icon-only buttons must have `aria-label`
+- StatusBadge must be visible on every draft screen
+- No inline styles — Tailwind only
+- TypeScript strict — no `any`
+
+## Related Skills
+
+- `vercel-react-best-practices` — Next.js App Router performance patterns
+- `web-design-guidelines` — accessibility and UX compliance audit
