@@ -8,10 +8,11 @@ import httpx
 from src.api.exceptions import integration_error
 
 _EXTRACTION_PROMPT = """You are a business card OCR assistant.
-Look at this business card image carefully and extract all text and fields.
+Look at this image carefully. First classify the image type, then extract contact fields.
 
 Return ONLY valid JSON with this exact structure:
 {
+  "card_type": "business_card",
   "raw_text": "full verbatim text from the card",
   "name":      {"value": string|null, "confidence": float},
   "company":   {"value": string|null, "confidence": float},
@@ -22,9 +23,17 @@ Return ONLY valid JSON with this exact structure:
   "website":   {"value": string|null, "confidence": float}
 }
 
-Rules:
+card_type rules — use EXACTLY one of these values:
+- "business_card": a name card or contact card containing person/company information
+- "bank_card": a credit card, debit card, or ATM card (has card number, bank logo)
+- "membership_card": a loyalty card, store card, shopping card, or membership card
+- "poor_quality": image is too blurry, dark, rotated, or otherwise unreadable
+- "other": anything else (photo, document, ID card, etc.)
+
+Field rules:
 - confidence is 0.0–1.0 reflecting how certain you are
-- Set value to null and confidence to 0.0 if a field is not found
+- If card_type is NOT "business_card", set all field values to null and confidence to 0.0
+- Set value to null and confidence to 0.0 if a field is not found on the card
 - For phone: include country code if visible
 - For website: include domain only (strip http/https)
 - raw_text: copy all visible text exactly as it appears"""
@@ -60,6 +69,7 @@ Rules:
 - Generate the email in the same language as the meeting minutes."""
 
 _MOCK_FIELDS: dict = {
+    "card_type": "business_card",
     "raw_text": "Nguyen Van A\nSales Manager\nABC Corporation\nEmail: nva@abc.com\nTel: 090-1234-567\nwww.abc.com",
     "name":      {"value": "Nguyen Van A",    "confidence": 0.95},
     "company":   {"value": "ABC Corporation", "confidence": 0.92},
@@ -139,7 +149,7 @@ class MockLLMClient:
     ) -> tuple[str, dict]:
         raw_text = _MOCK_FIELDS["raw_text"]
         fields = {k: v for k, v in _MOCK_FIELDS.items() if k != "raw_text"}
-        return raw_text, fields
+        return raw_text, fields  # fields includes card_type
 
     async def summarize_transcript(self, transcript_text: str) -> dict:
         return dict(_MOCK_MOM)

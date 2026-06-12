@@ -28,6 +28,15 @@ export function CardUpload({ onScanComplete }: CardUploadProps) {
         form.append('file', file)
         const card = await api.postForm<CardScanResponse>('/cards/scan', form)
         console.log('[STEP 1] scan API response:', JSON.stringify(card, null, 2))
+
+        if (card.card_type !== 'business_card') {
+          setError(
+            card.error_message ??
+              'This does not appear to be a business card. Please upload a contact or business card.',
+          )
+          return
+        }
+
         onScanComplete(card)
       } catch (err) {
         setError(
@@ -104,6 +113,7 @@ export function CardUpload({ onScanComplete }: CardUploadProps) {
         ref={fileInputRef}
         type="file"
         accept="image/*"
+        aria-label="Upload business card image"
         className="hidden"
         onChange={onInputChange}
         disabled={scanning}

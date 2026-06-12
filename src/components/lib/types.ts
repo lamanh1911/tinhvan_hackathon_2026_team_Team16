@@ -63,6 +63,7 @@ export interface CardFields {
 export interface CardScanResponse {
   id: string
   status: string
+  card_type: string
   fields: CardFields
   is_valid_card: boolean
   error_message: string | null

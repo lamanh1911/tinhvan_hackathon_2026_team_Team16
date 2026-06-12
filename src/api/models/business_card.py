@@ -24,6 +24,7 @@ class BusinessCard(Base):
     fields_json: Mapped[dict | None] = mapped_column(JSON)
     confidence: Mapped[float | None] = mapped_column()
     language: Mapped[str | None] = mapped_column(String(10))
+    card_type: Mapped[str | None] = mapped_column(String(30))
     status: Mapped[str] = mapped_column(String(20), default="pending", nullable=False)
     created_at: Mapped[datetime] = now_tz()
     updated_at: Mapped[datetime] = now_tz()
