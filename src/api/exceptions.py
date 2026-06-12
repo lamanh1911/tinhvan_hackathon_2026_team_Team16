@@ -31,3 +31,11 @@ def invalid_status(message: str) -> AppError:
 
 def integration_error(service: str) -> AppError:
     return AppError(503, "INTEGRATION_ERROR", f"{service} is unavailable")
+
+
+def invalid_card_type(message: str = "Uploaded image is not a valid business card") -> AppError:
+    return AppError(422, "INVALID_CARD_TYPE", message)
+
+
+def wrong_card_type(message: str = "Uploaded image appears to be a bank card or membership card, not a business card") -> AppError:
+    return AppError(422, "WRONG_CARD_TYPE", message)
