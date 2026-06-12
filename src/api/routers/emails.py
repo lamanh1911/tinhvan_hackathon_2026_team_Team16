@@ -274,11 +274,10 @@ def reopen_email(email_id: uuid.UUID, db: Session = Depends(get_db)):
 
 @router.post("/{email_id}/mark-sent", response_model=EmailDraftResponse)
 def mark_sent(email_id: uuid.UUID, db: Session = Depends(get_db)):
+    """Backward-compat alias for /send. Requires approved status."""
     email = _get_email(db, email_id)
-    if email.status == "sent":
-        raise invalid_status("Email is already marked as sent")
-    email.status = "sent"
-    email.updated_at = datetime.now(timezone.utc)
+    _transition(email, {"approved"}, "sent")
     db.commit()
     db.refresh(email)
+    logger.info("[mark-sent] email_id=%s marked as sent", email_id)
     return _email_to_response(email)

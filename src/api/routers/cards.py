@@ -51,7 +51,7 @@ async def scan_card(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
 ):
-    logger.info("[scan_card] received upload: filename=%s content_type=%s", file.filename, file.content_type)
+    logger.info("[scan_card] received upload: content_type=%s", file.content_type)
     image_bytes = await file.read()
     scanner = _get_scanner()
     result = await scanner.scan(

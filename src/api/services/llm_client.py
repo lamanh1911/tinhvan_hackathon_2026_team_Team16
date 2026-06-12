@@ -236,6 +236,7 @@ class GeminiVisionClient:
                     "Authorization": f"Bearer {self._api_key}",
                     "HTTP-Referer": "https://relay.app",
                     "X-Title": "Relay Card Scanner",
+                    "X-No-Log": "true",
                 },
                 json={
                     "model": self._model,
@@ -286,6 +287,7 @@ class OpenRouterLLMClient:
             "Authorization": f"Bearer {self._api_key}",
             "HTTP-Referer": "https://relay.app",
             "X-Title": "Relay Assistant",
+            "X-No-Log": "true",
         }
         # Free-tier endpoints frequently return 429/5xx — retry with backoff,
         # then surface a clean INTEGRATION_ERROR rather than a 500 (rule 03).
