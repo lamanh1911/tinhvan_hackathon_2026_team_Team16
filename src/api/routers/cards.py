@@ -54,7 +54,11 @@ async def scan_card(
     logger.info("[scan_card] received upload: filename=%s content_type=%s", file.filename, file.content_type)
     image_bytes = await file.read()
     scanner = _get_scanner()
-    result = await scanner.scan(image_bytes, file.filename or "card.jpg")
+    result = await scanner.scan(
+        image_bytes,
+        file.filename or "card.jpg",
+        content_type=file.content_type or "image/jpeg",
+    )
 
     logger.info("[scan_card] scan result fields: %s", list(result["fields"].keys()))
 

@@ -25,6 +25,7 @@ class Settings(BaseSettings):
 
     # OpenRouter
     openrouter_api_key: str = ""
+    openrouter_model: str = "google/gemini-2.5-flash"
 
     # Railway Object Storage (S3-compatible)
     storage_access_key: str = ""
