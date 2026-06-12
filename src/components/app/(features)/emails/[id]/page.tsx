@@ -12,6 +12,11 @@ import { api, ApiRequestError } from '@/lib/api-client'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import type { EmailDraft } from '@/lib/types'
 
+const TYPE_LABELS: Record<EmailDraft['type'], string> = {
+  thank_you: 'Thank-you Email',
+  follow_up: 'Follow-up Email',
+}
+
 export default function EmailDetailPage() {
   const params = useParams()
   const emailId = params.id as string
@@ -49,7 +54,18 @@ export default function EmailDetailPage() {
     fetchEmail()
   }, [fetchEmail])
 
-  const isSent = email?.status === 'sent'
+  async function handleAction(endpoint: string) {
+    setBusy(true)
+    setActionError(null)
+    try {
+      const updated = await api.post<EmailDraft>(`/emails/${emailId}/${endpoint}`, {})
+      applyEmail(updated)
+    } catch (err) {
+      setActionError(err instanceof ApiRequestError ? err.message : 'Action failed')
+    } finally {
+      setBusy(false)
+    }
+  }
 
   async function handleSave() {
     setBusy(true)
@@ -77,19 +93,6 @@ export default function EmailDetailPage() {
     }
   }
 
-  async function handleMarkSent() {
-    setBusy(true)
-    setActionError(null)
-    try {
-      const updated = await api.post<EmailDraft>(`/emails/${emailId}/mark-sent`, {})
-      applyEmail(updated)
-    } catch (err) {
-      setActionError(err instanceof ApiRequestError ? err.message : 'Action failed')
-    } finally {
-      setBusy(false)
-    }
-  }
-
   if (loading) {
     return (
       <div className="px-6 py-8 flex items-center justify-center min-h-[200px]">
@@ -113,10 +116,29 @@ export default function EmailDetailPage() {
     )
   }
 
+  const status = email.status
+  const isEditable = status === 'draft'
+  const isSent = status === 'sent'
+
   const inputBase =
     'block w-full rounded-md border border-slate-300 px-3 py-2 text-sm outline-none ' +
     'focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors duration-150 ' +
-    'disabled:bg-slate-100 disabled:text-slate-500'
+    'disabled:bg-slate-100 disabled:text-slate-500 disabled:cursor-not-allowed'
+
+  const btnPrimary =
+    'inline-flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-700 ' +
+    'px-4 py-2 rounded-md text-sm font-medium transition-colors duration-150 ' +
+    'disabled:opacity-50 disabled:cursor-not-allowed'
+
+  const btnSecondary =
+    'inline-flex items-center gap-2 bg-white text-slate-700 border border-slate-300 ' +
+    'hover:bg-slate-50 px-4 py-2 rounded-md text-sm font-medium transition-colors duration-150 ' +
+    'disabled:opacity-50 disabled:cursor-not-allowed'
+
+  const btnDanger =
+    'inline-flex items-center gap-2 bg-white text-red-600 border border-red-300 ' +
+    'hover:bg-red-50 px-4 py-2 rounded-md text-sm font-medium transition-colors duration-150 ' +
+    'disabled:opacity-50 disabled:cursor-not-allowed'
 
   return (
     <div className="px-6 py-8 max-w-3xl">
@@ -129,24 +151,30 @@ export default function EmailDetailPage() {
           <ArrowLeftIcon className="h-5 w-5" />
         </Link>
         <div className="flex-1">
-          <h1 className="text-2xl font-semibold text-slate-900">Follow-up Email</h1>
+          <h1 className="text-2xl font-semibold text-slate-900">
+            {TYPE_LABELS[email.type]}
+          </h1>
           <p className="text-sm text-slate-500 mt-0.5">
-            Review the draft, then copy the body to send it yourself.
+            Review the draft before sending.
           </p>
         </div>
         <StatusBadge status={email.status} />
       </div>
 
+      {/* Editor */}
       <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-6 mb-4 space-y-4">
         <div className="space-y-1">
-          <label htmlFor="email-subject" className="block text-sm font-medium text-slate-700">
+          <label
+            htmlFor="email-subject"
+            className="block text-sm font-medium text-slate-700"
+          >
             Subject
           </label>
           <input
             id="email-subject"
             value={subject}
             onChange={(e) => setSubject(e.target.value)}
-            disabled={isSent}
+            disabled={!isEditable || busy}
             placeholder="Email subject"
             className={inputBase}
           />
@@ -154,7 +182,10 @@ export default function EmailDetailPage() {
 
         <div className="space-y-1">
           <div className="flex items-center justify-between">
-            <label htmlFor="email-body" className="block text-sm font-medium text-slate-700">
+            <label
+              htmlFor="email-body"
+              className="block text-sm font-medium text-slate-700"
+            >
               Body
             </label>
             <button
@@ -179,39 +210,102 @@ export default function EmailDetailPage() {
             id="email-body"
             value={bodyText}
             onChange={(e) => setBodyText(e.target.value)}
-            disabled={isSent}
+            disabled={!isEditable || busy}
             rows={16}
             className={`${inputBase} resize-none`}
           />
         </div>
       </div>
 
-      <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-6 space-y-4">
-        {actionError && <p className="text-sm text-red-600">{actionError}</p>}
+      {/* Actions */}
+      <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-6 space-y-3">
+        {actionError && (
+          <p className="text-sm text-red-600">{actionError}</p>
+        )}
 
-        {isSent ? (
-          <p className="text-sm text-slate-600 bg-slate-100 border border-slate-200 rounded-md px-3 py-2">
-            This follow-up is marked as sent and is now read-only.
-          </p>
-        ) : (
+        {/* draft: Save + Submit for Review */}
+        {status === 'draft' && (
           <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={handleSave}
               disabled={busy}
-              className="bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 px-4 py-2 rounded-md text-sm font-medium transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+              className={btnSecondary}
             >
               Save changes
             </button>
             <button
               type="button"
-              onClick={handleMarkSent}
+              onClick={() => handleAction('submit')}
               disabled={busy}
-              className="bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 rounded-md text-sm font-medium transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+              className={btnPrimary}
             >
-              Mark as sent
+              Submit for Review
             </button>
           </div>
+        )}
+
+        {/* in_review: Reject + Approve */}
+        {status === 'in_review' && (
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => handleAction('reject')}
+              disabled={busy}
+              className={btnDanger}
+            >
+              Reject
+            </button>
+            <button
+              type="button"
+              onClick={() => handleAction('approve')}
+              disabled={busy}
+              className={btnPrimary}
+            >
+              Approve
+            </button>
+          </div>
+        )}
+
+        {/* approved: Mark as Sent */}
+        {status === 'approved' && (
+          <div className="flex items-center gap-3">
+            <p className="text-sm text-slate-600 flex-1">
+              Copy the email body above, paste it into your email client, then mark as sent.
+            </p>
+            <button
+              type="button"
+              onClick={() => handleAction('send')}
+              disabled={busy}
+              className={btnPrimary}
+            >
+              Mark as Sent
+            </button>
+          </div>
+        )}
+
+        {/* rejected: Reopen */}
+        {status === 'rejected' && (
+          <div className="flex items-center gap-3">
+            <p className="text-sm text-red-600 flex-1">
+              This draft was rejected. Reopen it to make edits and resubmit.
+            </p>
+            <button
+              type="button"
+              onClick={() => handleAction('reopen')}
+              disabled={busy}
+              className={btnSecondary}
+            >
+              Reopen
+            </button>
+          </div>
+        )}
+
+        {/* sent: read-only */}
+        {isSent && (
+          <p className="text-sm text-slate-600 bg-slate-100 border border-slate-200 rounded-md px-3 py-2">
+            This email is marked as sent and is now read-only.
+          </p>
         )}
       </div>
     </div>

@@ -1,0 +1,11 @@
+Subject: Thank you for our meeting — {{event_name}}
+
+Dear {{customer_name}},
+
+Thank you for taking the time to meet with us on {{meeting_date}}.
+We appreciated the opportunity and look forward to the next steps in our collaboration.
+
+If there is anything we can help you with, please don't hesitate to reach out.
+
+Best regards,
+The Relay Team

@@ -3,7 +3,11 @@ from datetime import datetime
 
 from pydantic import BaseModel
 
-EMAIL_STATUSES = ("draft", "sent")
+EMAIL_STATUSES = ("draft", "in_review", "approved", "sent", "rejected")
+
+
+class ThankYouEmailRequest(BaseModel):
+    meeting_id: uuid.UUID
 
 
 class FollowUpEmailRequest(BaseModel):

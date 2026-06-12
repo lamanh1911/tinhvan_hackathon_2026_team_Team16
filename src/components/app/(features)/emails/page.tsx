@@ -38,7 +38,7 @@ export default function EmailsPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-semibold text-slate-900">Emails</h1>
         <p className="text-sm text-slate-500 mt-1">
-          Review follow-up drafts and copy them to send yourself.
+          Review email drafts, submit for approval, then mark as sent.
         </p>
       </div>
 
