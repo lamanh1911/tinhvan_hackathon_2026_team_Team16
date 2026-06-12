@@ -88,7 +88,6 @@ export interface Meeting {
 
 export interface ActionItem {
   id: string
-  minutes_id: string
   description: string
   owner: string | null
   deadline: string | null
@@ -102,6 +101,16 @@ export interface MeetingMinutes {
   status: DraftStatus
   incomplete_warning: boolean
   action_items: ActionItem[]
+  created_at: string
+}
+
+export interface MeetingListItem {
+  meeting_id: string
+  minutes_id: string | null
+  status: DraftStatus | null
+  summary: string | null
+  incomplete_warning: boolean
+  action_item_count: number
   created_at: string
 }
 

@@ -1,0 +1,23 @@
+Meeting: GreenLeaf Clinic - Patient Scheduling System Onboarding
+Date: 10 June 2026
+Attendees: David Pham (Vendor, Sales), Ms. Huong (GreenLeaf, Operations Director), Tuan (Vendor, BrSE)
+
+David: Thanks for your time. Today we want to confirm the rollout plan for the new patient scheduling system across your three clinics in District 1, District 3, and Thu Duc.
+
+Ms. Huong: Yes. Our biggest worry is the go-live date. We need everything ready before the flu season starts, so no later than 3 August 2026.
+
+Tuan: That's feasible. The main technical task is integrating with your existing EMR, MediSoft. We will need API access from MediSoft by next week to start.
+
+Ms. Huong: I will ask our IT vendor to grant the MediSoft API access. Also, all screens must support Vietnamese, not only English. Many of our front-desk staff are not comfortable in English.
+
+David: Understood, full Vietnamese localization is included. One more thing: we recommend training for your nurses before go-live.
+
+Ms. Huong: We have about 40 nurses across the three clinics. Can you do on-site training?
+
+Tuan: Yes. I will prepare a two-day on-site training plan and schedule it for the last week of July.
+
+David: Great. To summarize, we will deliver the integration, Vietnamese localization, and training. We will send a detailed project plan and a quote for the training package.
+
+Ms. Huong: Perfect. Please send the quote by 17 June so I can get budget approval.
+
+David: Will do. Tuan will follow up on the MediSoft API access, and I will send the project plan and training quote.

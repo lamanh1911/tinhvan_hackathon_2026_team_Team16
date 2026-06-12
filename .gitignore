@@ -55,3 +55,11 @@ htmlcov/
 
 # Local env
 .env
+
+# Local runtime artifacts (dev servers, logs, scratch)
+.uvi.log*
+.uvicorn.log*
+.next-dev.log*
+.npm-install.log*
+.preview/
+ms-playwright/
