@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, File, UploadFile
+from fastapi import APIRouter, Depends, File, Form, UploadFile
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -62,6 +62,7 @@ def _get_minutes_for_meeting(db: Session, meeting_id: uuid.UUID) -> MeetingMinut
 @router.post("/mom", response_model=MOMDraftResponse, status_code=201)
 async def create_mom(
     file: UploadFile = File(...),
+    customer_id: uuid.UUID | None = Form(default=None),
     db: Session = Depends(get_db),
 ):
     raw = await file.read()
@@ -72,7 +73,7 @@ async def create_mom(
     mom = await summarizer.summarize(transcript_text)
 
     # Auto-create an internal meeting to anchor the MOM (and any follow-up email).
-    meeting = Meeting(mode="online")
+    meeting = Meeting(mode="online", customer_id=customer_id)
     db.add(meeting)
     db.flush()
 
