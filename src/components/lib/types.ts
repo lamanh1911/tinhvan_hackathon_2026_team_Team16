@@ -53,16 +53,19 @@ export interface BusinessCard {
 export interface CardFields {
   name: FieldWithConfidence
   company: FieldWithConfidence
-  title: FieldWithConfidence
+  job_title: FieldWithConfidence
   email: FieldWithConfidence
   phone: FieldWithConfidence
   address: FieldWithConfidence
+  website: FieldWithConfidence
 }
 
 export interface CardScanResponse {
   id: string
   status: string
   fields: CardFields
+  is_valid_card: boolean
+  error_message: string | null
   created_at: string
 }
 

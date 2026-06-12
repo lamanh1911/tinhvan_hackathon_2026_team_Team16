@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useParams } from 'next/navigation'
-import { ArrowLeftIcon } from '@heroicons/react/24/outline'
+import { ArrowLeftIcon, ExclamationCircleIcon } from '@heroicons/react/24/outline'
 import { api, ApiRequestError } from '@/lib/api-client'
 import { CardFieldEditor } from '@/components/cards/CardFieldEditor'
 import { CardActions } from '@/components/cards/CardActions'
@@ -12,20 +12,22 @@ import type { CardFields, CardScanResponse } from '@/lib/types'
 const FIELD_LABELS: Record<keyof CardFields, string> = {
   name: 'Full Name',
   company: 'Company',
-  title: 'Job Title',
+  job_title: 'Job Title',
   email: 'Email',
   phone: 'Phone',
   address: 'Address',
+  website: 'Website',
 }
 
-const REQUIRED_FIELDS: Array<keyof CardFields> = ['name', 'company', 'email']
+const REQUIRED_FIELDS: Array<keyof CardFields> = ['name', 'company', 'email', 'phone', 'job_title']
 const FIELD_ORDER: Array<keyof CardFields> = [
   'name',
   'company',
-  'title',
+  'job_title',
   'email',
   'phone',
   'address',
+  'website',
 ]
 
 export default function CardReviewPage() {
@@ -42,6 +44,9 @@ export default function CardReviewPage() {
     setFetchError(null)
     try {
       const data = await api.get<CardScanResponse>(`/cards/${cardId}`)
+      console.log('[CardReview] fetchCard response:', data)
+      console.log('[CardReview] fields:', data.fields)
+      console.log('[CardReview] is_valid_card:', data.is_valid_card, '| error_message:', data.error_message)
       setCard(data)
     } catch (err) {
       setFetchError(
@@ -60,6 +65,7 @@ export default function CardReviewPage() {
     const updated = await api.patch<CardScanResponse>(`/cards/${cardId}`, {
       [fieldName]: value,
     })
+    console.log('[CardReview] after field save:', updated)
     setCard(updated)
   }
 
@@ -119,6 +125,13 @@ export default function CardReviewPage() {
           </p>
         </div>
       </div>
+
+      {!card.is_valid_card && card.error_message && (
+        <div className="mb-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3">
+          <ExclamationCircleIcon className="h-4 w-4 text-red-600 mt-0.5 shrink-0" />
+          <p className="text-sm text-red-700">{card.error_message}</p>
+        </div>
+      )}
 
       <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-6 mb-4">
         <h2 className="text-lg font-medium text-slate-900 mb-4">
