@@ -21,8 +21,10 @@ class Meeting(Base):
     )
 
     id: Mapped[uuid.UUID] = uuid_pk()
-    customer_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("customers.id"), nullable=False, index=True
+    # Nullable: a meeting may be auto-created from a transcript upload (FR-05)
+    # before any customer is linked.
+    customer_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("customers.id"), nullable=True, index=True
     )
     mode: Mapped[str] = mapped_column(String(10), nullable=False)
     start_time: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
