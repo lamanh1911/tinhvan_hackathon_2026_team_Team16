@@ -7,74 +7,70 @@ import httpx
 
 from src.api.exceptions import integration_error
 
-_CARD_VALIDATION_PROMPT = """You are a business card validator and OCR extractor.
+_CARD_VALIDATION_PROMPT = """You are a business card scanner assistant.
 
-IMPORTANT: Check in this exact order.
+DECISION: Is this image a clear, readable BUSINESS CARD (name card / visiting card)?
 
-Step 1 — Is this a BANK CARD, CREDIT CARD, or DEBIT CARD?
-Visual clues: 16-digit embossed/printed number (groups of 4), Visa / Mastercard / JCB / AMEX / UnionPay logo, bank name with card-issuer branding, "Valid Thru" or "Expires" date, signature strip, CVV area, hologram.
-If YES → return IMMEDIATELY (do not proceed to Step 2 or 3):
-{
-  "is_valid_card": false,
-  "error_code": "WRONG_CARD_TYPE",
-  "error_message": "Uploaded image appears to be a bank or credit card, not a business card",
-  "fields": null
-}
+Apply these rules strictly — do not guess:
+- Return YES only if the image clearly shows ALL of: person name, job title or position, company or organisation name, and at least one contact method (email, phone, website, or address).
+- Return NO if you are not certain, if the image is blurry or unreadable, or if it is clearly not a business card.
 
-Step 2 — Is this a MEMBERSHIP, LOYALTY, STORE, PREPAID, or GIFT CARD?
-Visual clues: retailer/brand logo, "Member Since", points/rewards balance, no job title, no work email.
-If YES → return IMMEDIATELY:
-{
-  "is_valid_card": false,
-  "error_code": "WRONG_CARD_TYPE",
-  "error_message": "Uploaded image appears to be a membership or loyalty card, not a business card",
-  "fields": null
-}
+---
 
-Step 3 — Is this an ID CARD, DRIVER LICENSE, PASSPORT, EMPLOYEE BADGE, or GOVERNMENT ID?
-If YES → return IMMEDIATELY:
-{
-  "is_valid_card": false,
-  "error_code": "WRONG_CARD_TYPE",
-  "error_message": "Uploaded image is an identity document, not a business card",
-  "fields": null
-}
-
-Step 4 — Is this a BUSINESS CARD (name card / visiting card)?
-A business card MUST have ALL of: person name, job title or role, company/organisation name, AND at least one contact method (email, phone, website, or address).
-If YES → go to Step 5.
-
-Step 5 — Extract the fields.
-Rules:
-- Do not hallucinate — extract only text that is clearly visible
-- Return null for any field you cannot read with reasonable certainty
-- confidence is 0.0–1.0 reflecting certainty
-
-Return this exact JSON:
+If YES (it is a clear business card) → extract fields and return:
 {
   "is_valid_card": true,
   "error_code": null,
   "error_message": null,
   "fields": {
-    "name":      {"value": "string|null", "confidence": 0.0},
-    "company":   {"value": "string|null", "confidence": 0.0},
-    "email":     {"value": "string|null", "confidence": 0.0},
-    "phone":     {"value": "string|null", "confidence": 0.0},
-    "job_title": {"value": "string|null", "confidence": 0.0},
-    "address":   {"value": "string|null", "confidence": 0.0},
-    "website":   {"value": "string|null", "confidence": 0.0}
+    "name":      {"value": "...", "confidence": 0.0},
+    "company":   {"value": "...", "confidence": 0.0},
+    "email":     {"value": "...", "confidence": 0.0},
+    "phone":     {"value": "...", "confidence": 0.0},
+    "job_title": {"value": "...", "confidence": 0.0},
+    "address":   {"value": "...", "confidence": 0.0},
+    "website":   {"value": "...", "confidence": 0.0}
   }
 }
+Field rules: extract only clearly visible text; set value to null and confidence to 0.0 for any field not found.
 
-If none of the above match (selfie, blank image, food, landscape, receipt, document, etc.) → return:
+---
+
+If NO → identify the reason and return one of these:
+
+Image is a BANK CARD, CREDIT CARD, DEBIT CARD, or ATM CARD (has card number, bank logo, Visa/Mastercard/JCB/AMEX):
 {
   "is_valid_card": false,
-  "error_code": "INVALID_CARD_TYPE",
-  "error_message": "Uploaded image is not a valid business card",
+  "error_code": "WRONG_CARD_TYPE",
+  "error_message": "This appears to be a bank or payment card, not a business card. Please upload a name card or contact card.",
   "fields": null
 }
 
-Return JSON only. No markdown. No explanation."""
+Image is a MEMBERSHIP CARD, LOYALTY CARD, SHOPPING CARD, GIFT CARD, STUDENT CARD, or ID CARD:
+{
+  "is_valid_card": false,
+  "error_code": "WRONG_CARD_TYPE",
+  "error_message": "This appears to be a membership, student, or identity card, not a business card. Please upload a name card or contact card.",
+  "fields": null
+}
+
+Image is BLURRY, TOO DARK, OVER-EXPOSED, or otherwise UNREADABLE (cannot identify card type or read text):
+{
+  "is_valid_card": false,
+  "error_code": "POOR_QUALITY",
+  "error_message": "The image is too blurry or unclear to read. Please take a clearer photo in good lighting.",
+  "fields": null
+}
+
+Image is anything else (photo, selfie, receipt, document, screenshot, food, landscape, etc.):
+{
+  "is_valid_card": false,
+  "error_code": "INVALID_CARD_TYPE",
+  "error_message": "This does not appear to be a business card. Please upload a name card or contact card.",
+  "fields": null
+}
+
+Return JSON only. No markdown fences. No explanation outside the JSON."""
 
 _MOM_SYSTEM_PROMPT = """You are a meeting-minutes assistant.
 Read the meeting transcript and return ONLY valid JSON with this structure:

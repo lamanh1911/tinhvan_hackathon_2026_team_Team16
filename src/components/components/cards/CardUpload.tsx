@@ -12,6 +12,7 @@ interface CardUploadProps {
 const ERROR_TITLES: Record<string, string> = {
   WRONG_CARD_TYPE: 'Wrong card type',
   INVALID_CARD_TYPE: 'Not a business card',
+  POOR_QUALITY: 'Image quality too low',
 }
 
 export function CardUpload({ onScanComplete }: CardUploadProps) {
@@ -135,6 +136,11 @@ export function CardUpload({ onScanComplete }: CardUploadProps) {
               {(errorCode === 'WRONG_CARD_TYPE' || errorCode === 'INVALID_CARD_TYPE') && (
                 <p className="text-xs text-red-600 mt-2">
                   Please upload a business card (name card / visiting card) only.
+                </p>
+              )}
+              {errorCode === 'POOR_QUALITY' && (
+                <p className="text-xs text-red-600 mt-2">
+                  Please retake the photo in better lighting, or upload a clearer image.
                 </p>
               )}
             </div>
