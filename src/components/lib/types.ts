@@ -143,11 +143,14 @@ export interface SlotProposal {
   start: string
   end: string
   attendees: AttendeeSlotStatus[]
+  travel_buffer_minutes?: number | null
 }
 
 export interface ScheduleProposal {
   id: string
   status: 'draft' | 'approved'
+  mode: string
+  location: string | null
   slots: SlotProposal[]
   approved_slot_index: number | null
   customer_id: string | null

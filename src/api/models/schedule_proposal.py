@@ -22,6 +22,8 @@ class ScheduleProposal(Base):
         UUID(as_uuid=True), nullable=True, index=True
     )
     status: Mapped[str] = mapped_column(String(20), default="draft", nullable=False)
+    mode: Mapped[str] = mapped_column(String(20), default="online", nullable=False)
+    location: Mapped[str | None] = mapped_column(String(500), nullable=True)
     slots_json: Mapped[list | None] = mapped_column(JSON)
     approved_slot_index: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = now_tz()

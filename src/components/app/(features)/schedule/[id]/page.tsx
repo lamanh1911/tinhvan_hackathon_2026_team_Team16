@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { ArrowLeftIcon } from '@heroicons/react/24/outline'
+import { ArrowLeftIcon, MapPinIcon } from '@heroicons/react/24/outline'
 import { api, ApiRequestError } from '@/lib/api-client'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import { SlotList } from '@/components/schedule/SlotList'
@@ -88,6 +88,12 @@ export default function ScheduleProposalPage() {
           <p className="text-sm text-slate-500 mt-1">
             {proposal.slots.length} conflict-free slot{proposal.slots.length !== 1 ? 's' : ''} found
           </p>
+          {proposal.mode === 'offline' && proposal.location && (
+            <p className="flex items-center gap-1 text-sm text-amber-700 mt-1">
+              <MapPinIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
+              {proposal.location}
+            </p>
+          )}
         </div>
         <StatusBadge status={proposal.status} />
       </div>

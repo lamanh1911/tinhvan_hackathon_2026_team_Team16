@@ -15,6 +15,7 @@ class SlotProposal(BaseModel):
     start: datetime
     end: datetime
     attendees: list[AttendeeSlotStatus]
+    travel_buffer_minutes: int | None = None
 
 
 class ScheduleOnlineRequest(BaseModel):
@@ -26,9 +27,21 @@ class ScheduleOnlineRequest(BaseModel):
     )
 
 
+class ScheduleOfflineRequest(BaseModel):
+    location: str = Field(..., min_length=1, description="Meeting location address")
+    customer_id: uuid.UUID | None = None
+    member_ids: list[uuid.UUID] | None = None
+    start_date: str | None = Field(
+        default=None,
+        description="ISO date string (YYYY-MM-DD). Defaults to today.",
+    )
+
+
 class ScheduleProposalResponse(BaseModel):
     id: uuid.UUID
     status: str
+    mode: str = "online"
+    location: str | None = None
     slots: list[SlotProposal]
     approved_slot_index: int | None
     customer_id: uuid.UUID | None

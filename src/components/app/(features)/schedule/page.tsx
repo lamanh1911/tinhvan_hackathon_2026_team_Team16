@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { CalendarIcon, PlusIcon } from '@heroicons/react/24/outline'
+import { CalendarIcon, MapPinIcon, PlusIcon } from '@heroicons/react/24/outline'
 import { api, ApiRequestError } from '@/lib/api-client'
 import { StatusBadge } from '@/components/ui/StatusBadge'
 import type { ScheduleProposal } from '@/lib/types'
@@ -16,11 +16,16 @@ function formatDate(iso: string) {
   })
 }
 
+type Tab = 'online' | 'offline'
+
 export default function SchedulePage() {
   const router = useRouter()
   const [proposals, setProposals] = useState<ScheduleProposal[]>([])
   const [loading, setLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState<Tab>('online')
   const [generating, setGenerating] = useState(false)
+  const [location, setLocation] = useState('')
+  const [locationError, setLocationError] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const fetchProposals = useCallback(async () => {
@@ -41,7 +46,7 @@ export default function SchedulePage() {
     fetchProposals()
   }, [fetchProposals])
 
-  async function handleGenerate() {
+  async function handleGenerateOnline() {
     setGenerating(true)
     setError(null)
     try {
@@ -55,34 +60,141 @@ export default function SchedulePage() {
     }
   }
 
+  async function handleGenerateOffline() {
+    if (!location.trim()) {
+      setLocationError('Meeting location is required')
+      return
+    }
+    setLocationError(null)
+    setGenerating(true)
+    setError(null)
+    try {
+      const proposal = await api.post<ScheduleProposal>('/schedule/offline', {
+        location: location.trim(),
+      })
+      router.push(`/schedule/${proposal.id}`)
+    } catch (err) {
+      setError(
+        err instanceof ApiRequestError ? err.message : 'Failed to generate schedule',
+      )
+      setGenerating(false)
+    }
+  }
+
+  const tabBase =
+    'px-4 py-2 text-sm font-medium border-b-2 transition-colors duration-150'
+  const tabActive = `${tabBase} border-blue-600 text-blue-600`
+  const tabInactive = `${tabBase} border-transparent text-slate-500 hover:text-slate-700`
+
   return (
     <div className="px-6 py-8 max-w-[1200px]">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Schedule</h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Propose conflict-free meeting slots for all team members.
-          </p>
-        </div>
-        <button
-          type="button"
-          disabled={generating}
-          onClick={handleGenerate}
-          className="flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {generating ? (
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-          ) : (
-            <PlusIcon className="h-4 w-4" aria-hidden="true" />
-          )}
-          {generating ? 'Generating...' : 'New Proposal'}
-        </button>
+      <div className="mb-6">
+        <h1 className="text-2xl font-semibold text-slate-900">Schedule</h1>
+        <p className="text-sm text-slate-500 mt-1">
+          Propose conflict-free meeting slots for all team members.
+        </p>
       </div>
 
-      {error && (
-        <p className="mb-4 text-sm text-red-600">{error}</p>
-      )}
+      {/* New Proposal card */}
+      <div className="bg-white rounded-lg border border-slate-200 shadow-sm p-6 mb-8">
+        <h2 className="text-lg font-medium text-slate-900 mb-4">New Proposal</h2>
 
+        {/* Tabs */}
+        <div className="flex gap-0 border-b border-slate-200 mb-6">
+          <button
+            type="button"
+            onClick={() => setActiveTab('online')}
+            className={activeTab === 'online' ? tabActive : tabInactive}
+          >
+            Online
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('offline')}
+            className={activeTab === 'offline' ? tabActive : tabInactive}
+          >
+            Offline
+          </button>
+        </div>
+
+        {activeTab === 'online' && (
+          <div className="flex items-center gap-4">
+            <p className="text-sm text-slate-600">
+              Find available slots for all team members with no travel required.
+            </p>
+            <button
+              type="button"
+              disabled={generating}
+              onClick={handleGenerateOnline}
+              className="shrink-0 flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {generating ? (
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+              ) : (
+                <PlusIcon className="h-4 w-4" aria-hidden="true" />
+              )}
+              {generating ? 'Generating...' : 'New Proposal'}
+            </button>
+          </div>
+        )}
+
+        {activeTab === 'offline' && (
+          <div className="space-y-4">
+            <p className="text-sm text-slate-600">
+              Find slots that account for travel time to the meeting location.
+              A 30-minute travel buffer is added to each proposed slot.
+            </p>
+            <div className="space-y-1">
+              <label
+                htmlFor="offline-location"
+                className="block text-sm font-medium text-slate-700"
+              >
+                Meeting location
+              </label>
+              <div className="flex items-center gap-3">
+                <div className="relative flex-1 max-w-md">
+                  <MapPinIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" aria-hidden="true" />
+                  <input
+                    id="offline-location"
+                    type="text"
+                    value={location}
+                    onChange={(e) => {
+                      setLocation(e.target.value)
+                      if (locationError) setLocationError(null)
+                    }}
+                    placeholder="e.g. 123 Nguyen Hue, Ho Chi Minh City"
+                    className={[
+                      'block w-full rounded-md border pl-9 pr-3 py-2 text-sm outline-none',
+                      'focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors duration-150',
+                      locationError ? 'border-red-400' : 'border-slate-300',
+                    ].join(' ')}
+                  />
+                </div>
+                <button
+                  type="button"
+                  disabled={generating}
+                  onClick={handleGenerateOffline}
+                  className="shrink-0 flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {generating ? (
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  ) : (
+                    <PlusIcon className="h-4 w-4" aria-hidden="true" />
+                  )}
+                  {generating ? 'Generating...' : 'New Proposal'}
+                </button>
+              </div>
+              {locationError && (
+                <p className="text-xs text-red-600 mt-1">{locationError}</p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+      </div>
+
+      {/* Proposals list */}
       {loading ? (
         <div className="flex items-center justify-center py-12">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-slate-200 border-t-blue-600" />
@@ -92,7 +204,7 @@ export default function SchedulePage() {
           <CalendarIcon className="h-12 w-12 text-slate-300 mb-4" />
           <p className="text-sm font-medium text-slate-900 mb-1">No proposals yet</p>
           <p className="text-xs text-slate-500">
-            Click &quot;New Proposal&quot; to find available meeting slots.
+            Use the form above to find available meeting slots.
           </p>
         </div>
       ) : (
@@ -102,6 +214,9 @@ export default function SchedulePage() {
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wide">
                   Created
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wide">
+                  Mode
                 </th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wide">
                   Slots
@@ -119,6 +234,23 @@ export default function SchedulePage() {
                 <tr key={p.id} className="hover:bg-slate-50 transition-colors duration-100">
                   <td className="px-4 py-3 text-sm text-slate-700">
                     {formatDate(p.created_at)}
+                  </td>
+                  <td className="px-4 py-3 text-sm">
+                    <span
+                      className={[
+                        'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium',
+                        p.mode === 'offline'
+                          ? 'bg-amber-100 text-amber-800'
+                          : 'bg-blue-100 text-blue-800',
+                      ].join(' ')}
+                    >
+                      {p.mode === 'offline' ? (
+                        <MapPinIcon className="h-3 w-3" aria-hidden="true" />
+                      ) : (
+                        <CalendarIcon className="h-3 w-3" aria-hidden="true" />
+                      )}
+                      {p.mode === 'offline' ? 'Offline' : 'Online'}
+                    </span>
                   </td>
                   <td className="px-4 py-3 text-sm text-slate-600">
                     {p.slots.length} slot{p.slots.length !== 1 ? 's' : ''}

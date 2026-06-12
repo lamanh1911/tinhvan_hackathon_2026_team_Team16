@@ -49,11 +49,18 @@ export function SlotList({ slots, approvedIndex, onApprove, disabled }: SlotList
                   <p className="text-sm font-medium text-slate-900">
                     {formatSlot(slot.start, slot.end)}
                   </p>
-                  {isApproved && (
-                    <span className="inline-block mt-1 text-xs font-medium text-green-700 bg-green-100 rounded-full px-2 py-0.5">
-                      Selected
-                    </span>
-                  )}
+                  <div className="flex items-center gap-2 mt-1">
+                    {isApproved && (
+                      <span className="text-xs font-medium text-green-700 bg-green-100 rounded-full px-2 py-0.5">
+                        Selected
+                      </span>
+                    )}
+                    {slot.travel_buffer_minutes != null && slot.travel_buffer_minutes > 0 && (
+                      <span className="text-xs font-medium text-amber-700 bg-amber-100 rounded-full px-2 py-0.5">
+                        {slot.travel_buffer_minutes} min travel
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
 

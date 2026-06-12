@@ -12,12 +12,14 @@ from src.api.models.member import Member
 from src.api.models.schedule_proposal import ScheduleProposal
 from src.api.schemas.schedule import (
     AttendeeSlotStatus,
+    ScheduleOfflineRequest,
     ScheduleOnlineRequest,
     ScheduleProposalResponse,
     SlotApproveRequest,
     SlotProposal,
 )
 from src.api.services.graph_client import make_graph_client
+from src.api.services.maps_client import make_maps_client
 
 logger = logging.getLogger(__name__)
 
@@ -59,11 +61,29 @@ def _has_conflict(
     return False
 
 
+def _needs_travel_buffer(
+    slot_start: datetime,
+    member_emails: list[str],
+    busy_blocks: dict[str, list[dict]],
+    buffer_minutes: int,
+) -> bool:
+    """BR-11: Reject slot if a prior busy block ends too close to slot_start."""
+    buffer = timedelta(minutes=buffer_minutes)
+    for email in member_emails:
+        for block in busy_blocks.get(email, []):
+            block_end = datetime.fromisoformat(block["end"])
+            # A prior appointment ends before the slot; check travel gap
+            if block_end <= slot_start and slot_start - block_end < buffer:
+                return True
+    return False
+
+
 async def _find_slots(
     member_emails: list[str],
     member_names: list[str],
     start_date: date,
     graph_client,
+    travel_buffer_minutes: int | None = None,
 ) -> list[dict]:
     search_end = datetime.combine(
         start_date + timedelta(days=_MAX_SEARCH_DAYS),
@@ -85,19 +105,45 @@ async def _find_slots(
                     break
                 slot_start = datetime.combine(current, time(hour, 0), tzinfo=timezone.utc)
                 slot_end = slot_start + timedelta(minutes=_DURATION_MINUTES)
-                if not _has_conflict(slot_start, slot_end, member_emails, busy_blocks):
-                    slots.append({
-                        "start": slot_start.isoformat(),
-                        "end": slot_end.isoformat(),
-                        "attendees": [
-                            {"name": name, "email": email, "status": "free"}
-                            for name, email in zip(member_names, member_emails)
-                        ],
-                    })
+
+                if _has_conflict(slot_start, slot_end, member_emails, busy_blocks):
+                    continue
+
+                if travel_buffer_minutes and _needs_travel_buffer(
+                    slot_start, member_emails, busy_blocks, travel_buffer_minutes
+                ):
+                    continue
+
+                slot: dict = {
+                    "start": slot_start.isoformat(),
+                    "end": slot_end.isoformat(),
+                    "attendees": [
+                        {"name": name, "email": email, "status": "free"}
+                        for name, email in zip(member_names, member_emails)
+                    ],
+                }
+                if travel_buffer_minutes is not None:
+                    slot["travel_buffer_minutes"] = travel_buffer_minutes
+                slots.append(slot)
+
         current += timedelta(days=1)
         days_checked += 1
 
     return slots
+
+
+def _resolve_members(db: Session, member_ids: list[uuid.UUID] | None):
+    if member_ids:
+        members = db.query(Member).filter(Member.id.in_(member_ids)).all()
+    else:
+        members = db.query(Member).all()
+
+    if members:
+        return [m.email for m in members], [m.name for m in members]
+    return (
+        [m["email"] for m in _MOCK_MEMBERS],
+        [m["name"] for m in _MOCK_MEMBERS],
+    )
 
 
 def _proposal_to_response(proposal: ScheduleProposal) -> ScheduleProposalResponse:
@@ -108,12 +154,15 @@ def _proposal_to_response(proposal: ScheduleProposal) -> ScheduleProposalRespons
             start=datetime.fromisoformat(s["start"]),
             end=datetime.fromisoformat(s["end"]),
             attendees=[AttendeeSlotStatus(**a) for a in s.get("attendees", [])],
+            travel_buffer_minutes=s.get("travel_buffer_minutes"),
         )
         for i, s in enumerate(raw_slots)
     ]
     return ScheduleProposalResponse(
         id=proposal.id,
         status=proposal.status,
+        mode=proposal.mode,
+        location=proposal.location,
         slots=slots,
         approved_slot_index=proposal.approved_slot_index,
         customer_id=proposal.customer_id,
@@ -129,19 +178,7 @@ async def create_schedule_proposal(
     settings = get_settings()
     graph_client = make_graph_client(use_mocks=settings.use_mocks)
 
-    # Resolve members: use provided IDs or fall back to all members in DB
-    if body.member_ids:
-        members = db.query(Member).filter(Member.id.in_(body.member_ids)).all()
-    else:
-        members = db.query(Member).all()
-
-    if members:
-        member_emails = [m.email for m in members]
-        member_names = [m.name for m in members]
-    else:
-        # No members in DB — use mock attendees
-        member_emails = [m["email"] for m in _MOCK_MEMBERS]
-        member_names = [m["name"] for m in _MOCK_MEMBERS]
+    member_emails, member_names = _resolve_members(db, body.member_ids)
 
     start_date = date.today()
     if body.start_date:
@@ -150,12 +187,13 @@ async def create_schedule_proposal(
         except ValueError:
             pass
 
-    logger.info("[schedule] generating slots from=%s members=%d", start_date, len(member_emails))
+    logger.info("[schedule/online] generating slots from=%s members=%d", start_date, len(member_emails))
 
     slots = await _find_slots(member_emails, member_names, start_date, graph_client)
 
     proposal = ScheduleProposal(
         customer_id=body.customer_id,
+        mode="online",
         status="draft",
         slots_json=slots,
     )
@@ -163,7 +201,58 @@ async def create_schedule_proposal(
     db.commit()
     db.refresh(proposal)
 
-    logger.info("[schedule] created proposal id=%s slots=%d", proposal.id, len(slots))
+    logger.info("[schedule/online] created proposal id=%s slots=%d", proposal.id, len(slots))
+    return _proposal_to_response(proposal)
+
+
+@router.post("/offline", response_model=ScheduleProposalResponse, status_code=201)
+async def create_offline_schedule_proposal(
+    body: ScheduleOfflineRequest,
+    db: Session = Depends(get_db),
+):
+    settings = get_settings()
+    graph_client = make_graph_client(use_mocks=settings.use_mocks)
+    maps_client = make_maps_client(use_mocks=settings.use_mocks, settings=settings)
+
+    member_emails, member_names = _resolve_members(db, body.member_ids)
+
+    start_date = date.today()
+    if body.start_date:
+        try:
+            start_date = date.fromisoformat(body.start_date)
+        except ValueError:
+            pass
+
+    # Get travel buffer from mock (30 min) or real Maps API when available
+    departure_dt = datetime.combine(start_date, time(8, 0), tzinfo=timezone.utc)
+    travel_buffer = await maps_client.get_travel_time(
+        origin="Office",
+        destination=body.location,
+        departure_time=departure_dt,
+    )
+
+    logger.info(
+        "[schedule/offline] generating slots from=%s members=%d location=[redacted] buffer=%dmin",
+        start_date, len(member_emails), travel_buffer,
+    )
+
+    slots = await _find_slots(
+        member_emails, member_names, start_date, graph_client,
+        travel_buffer_minutes=travel_buffer,
+    )
+
+    proposal = ScheduleProposal(
+        customer_id=body.customer_id,
+        mode="offline",
+        location=body.location,
+        status="draft",
+        slots_json=slots,
+    )
+    db.add(proposal)
+    db.commit()
+    db.refresh(proposal)
+
+    logger.info("[schedule/offline] created proposal id=%s slots=%d", proposal.id, len(slots))
     return _proposal_to_response(proposal)
 
 
