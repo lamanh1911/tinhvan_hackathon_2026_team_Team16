@@ -9,35 +9,44 @@ from src.api.exceptions import integration_error
 
 _CARD_VALIDATION_PROMPT = """You are a business card validator and OCR extractor.
 
-Step 1 — Is this a business card (name card / visiting card)?
-A valid business card contains: person name, company name, job title/role, and at least one contact method (email, phone, website, or address), with a business-style layout.
-If YES → skip to Step 3.
+IMPORTANT: Check in this exact order.
 
-Step 2 — Is this a different type of card?
-Check if the image is any of the following non-business cards:
-- Bank card, credit card, debit card (16-digit card number, Visa/Mastercard/JCB/AMEX logo)
-- Loyalty card, membership card, points card, reward card
-- Gift card, prepaid card, store card
-- ID card, driver's license, passport, employee badge
+Step 1 — Is this a BANK CARD, CREDIT CARD, or DEBIT CARD?
+Visual clues: 16-digit embossed/printed number (groups of 4), Visa / Mastercard / JCB / AMEX / UnionPay logo, bank name with card-issuer branding, "Valid Thru" or "Expires" date, signature strip, CVV area, hologram.
+If YES → return IMMEDIATELY (do not proceed to Step 2 or 3):
+{
+  "is_valid_card": false,
+  "error_code": "WRONG_CARD_TYPE",
+  "error_message": "Uploaded image appears to be a bank or credit card, not a business card",
+  "fields": null
+}
+
+Step 2 — Is this a MEMBERSHIP, LOYALTY, STORE, PREPAID, or GIFT CARD?
+Visual clues: retailer/brand logo, "Member Since", points/rewards balance, no job title, no work email.
 If YES → return IMMEDIATELY:
 {
   "is_valid_card": false,
   "error_code": "WRONG_CARD_TYPE",
-  "error_message": "Uploaded image appears to be a bank card or membership card, not a business card",
+  "error_message": "Uploaded image appears to be a membership or loyalty card, not a business card",
   "fields": null
 }
 
-If the image is something else entirely (selfie, photo, landscape, food, receipt, invoice, blank, handwritten memo, unrelated document) → return IMMEDIATELY:
+Step 3 — Is this an ID CARD, DRIVER LICENSE, PASSPORT, EMPLOYEE BADGE, or GOVERNMENT ID?
+If YES → return IMMEDIATELY:
 {
   "is_valid_card": false,
-  "error_code": "INVALID_CARD_TYPE",
-  "error_message": "Uploaded image is not a valid business card",
+  "error_code": "WRONG_CARD_TYPE",
+  "error_message": "Uploaded image is an identity document, not a business card",
   "fields": null
 }
 
-Step 3 — Extract fields from the business card.
+Step 4 — Is this a BUSINESS CARD (name card / visiting card)?
+A business card MUST have ALL of: person name, job title or role, company/organisation name, AND at least one contact method (email, phone, website, or address).
+If YES → go to Step 5.
+
+Step 5 — Extract the fields.
 Rules:
-- Do not hallucinate — extract only visible text
+- Do not hallucinate — extract only text that is clearly visible
 - Return null for any field you cannot read with reasonable certainty
 - confidence is 0.0–1.0 reflecting certainty
 
@@ -55,6 +64,14 @@ Return this exact JSON:
     "address":   {"value": "string|null", "confidence": 0.0},
     "website":   {"value": "string|null", "confidence": 0.0}
   }
+}
+
+If none of the above match (selfie, blank image, food, landscape, receipt, document, etc.) → return:
+{
+  "is_valid_card": false,
+  "error_code": "INVALID_CARD_TYPE",
+  "error_message": "Uploaded image is not a valid business card",
+  "fields": null
 }
 
 Return JSON only. No markdown. No explanation."""
@@ -227,7 +244,7 @@ class GeminiVisionClient:
             )
             resp.raise_for_status()
             content = resp.json()["choices"][0]["message"]["content"]
-            return json.loads(content)
+            return _parse_json_content(content)
 
 
 class OpenRouterLLMClient:
