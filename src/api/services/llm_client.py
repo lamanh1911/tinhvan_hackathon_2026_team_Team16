@@ -6,22 +6,24 @@ import httpx
 _EXTRACTION_SYSTEM_PROMPT = """You are a business card OCR assistant.
 Extract fields from the text below and return ONLY valid JSON with this structure:
 {
-  "name":    {"value": string|null, "confidence": float},
-  "company": {"value": string|null, "confidence": float},
-  "title":   {"value": string|null, "confidence": float},
-  "email":   {"value": string|null, "confidence": float},
-  "phone":   {"value": string|null, "confidence": float},
-  "address": {"value": string|null, "confidence": float}
+  "name":      {"value": string|null, "confidence": float},
+  "company":   {"value": string|null, "confidence": float},
+  "job_title": {"value": string|null, "confidence": float},
+  "email":     {"value": string|null, "confidence": float},
+  "phone":     {"value": string|null, "confidence": float},
+  "address":   {"value": string|null, "confidence": float},
+  "website":   {"value": string|null, "confidence": float}
 }
 Confidence is 0.0–1.0 reflecting certainty. Set value to null and confidence to 0.0 if not found."""
 
 _MOCK_FIELDS: dict = {
-    "name":    {"value": "Nguyen Van A",   "confidence": 0.95},
-    "company": {"value": "ABC Corporation","confidence": 0.92},
-    "title":   {"value": "Sales Manager",  "confidence": 0.88},
-    "email":   {"value": "nva@abc.com",    "confidence": 0.65},
-    "phone":   {"value": "090-1234-567",   "confidence": 0.72},
-    "address": {"value": None,             "confidence": 0.0},
+    "name":      {"value": "Nguyen Van A",    "confidence": 0.95},
+    "company":   {"value": "ABC Corporation", "confidence": 0.92},
+    "job_title": {"value": "Sales Manager",   "confidence": 0.88},
+    "email":     {"value": "nva@abc.com",     "confidence": 0.65},
+    "phone":     {"value": "090-1234-567",    "confidence": 0.72},
+    "address":   {"value": None,              "confidence": 0.0},
+    "website":   {"value": "abc.com",         "confidence": 0.80},
 }
 
 

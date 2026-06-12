@@ -1,7 +1,15 @@
 import { CheckCircleIcon } from '@heroicons/react/24/outline'
 import type { CardScanResponse } from '@/lib/types'
 
-const REQUIRED_FIELDS = ['name', 'company', 'email'] as const
+const REQUIRED_FIELDS = ['name', 'company', 'email', 'phone', 'job_title'] as const
+
+const FIELD_LABELS: Record<string, string> = {
+  name: 'Full Name',
+  company: 'Company',
+  email: 'Email',
+  phone: 'Phone',
+  job_title: 'Job Title',
+}
 
 interface CardActionsProps {
   card: CardScanResponse
@@ -16,14 +24,16 @@ export function CardActions({ card, confirming, onConfirm }: CardActionsProps) {
   })
 
   const isConfirmed = card.status === 'confirmed'
-  const canConfirm = blockers.length === 0 && !isConfirmed
+  const canConfirm = blockers.length === 0 && !isConfirmed && card.is_valid_card
 
   return (
     <div className="space-y-3">
       {blockers.length > 0 && (
         <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
           Required fields need correction before confirming:{' '}
-          <span className="font-medium">{blockers.join(', ')}</span>
+          <span className="font-medium">
+            {blockers.map((f) => FIELD_LABELS[f] ?? f).join(', ')}
+          </span>
         </p>
       )}
 
@@ -35,6 +45,7 @@ export function CardActions({ card, confirming, onConfirm }: CardActionsProps) {
       )}
 
       <button
+        type="button"
         onClick={onConfirm}
         disabled={!canConfirm || confirming}
         className="w-full flex items-center justify-center gap-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 px-4 py-2.5 rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-150"

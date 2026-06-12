@@ -1,3 +1,4 @@
+import logging
 import uuid
 from datetime import datetime, timezone
 
@@ -16,7 +17,9 @@ from src.api.schemas.cards import (
     CardFields,
     CardScanResponse,
 )
-from src.api.services.card_scanner import make_card_scanner
+from src.api.services.card_scanner import make_card_scanner, _compute_validity
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/cards", tags=["cards"])
 
@@ -31,10 +34,14 @@ def _fields_to_schema(fields_json: dict) -> CardFields:
 
 
 def _card_to_response(card: BusinessCard) -> CardScanResponse:
+    fields_json: dict = card.fields_json or {}
+    is_valid_card, error_message = _compute_validity(fields_json)
     return CardScanResponse(
         id=card.id,
         status=card.status,
-        fields=_fields_to_schema(card.fields_json),
+        fields=_fields_to_schema(fields_json),
+        is_valid_card=is_valid_card,
+        error_message=error_message,
         created_at=card.created_at,
     )
 
@@ -44,9 +51,12 @@ async def scan_card(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
 ):
+    logger.info("[scan_card] received upload: filename=%s content_type=%s", file.filename, file.content_type)
     image_bytes = await file.read()
     scanner = _get_scanner()
     result = await scanner.scan(image_bytes, file.filename or "card.jpg")
+
+    logger.info("[scan_card] scan result fields: %s", list(result["fields"].keys()))
 
     card = BusinessCard(
         image_ref=result["image_ref"],
@@ -57,7 +67,10 @@ async def scan_card(
     db.add(card)
     db.commit()
     db.refresh(card)
-    return _card_to_response(card)
+
+    response = _card_to_response(card)
+    logger.info("[scan_card] response id=%s is_valid_card=%s", card.id, response.is_valid_card)
+    return response
 
 
 @router.get("/{card_id}", response_model=CardScanResponse)
@@ -106,7 +119,6 @@ def confirm_card(card_id: uuid.UUID, db: Session = Depends(get_db)):
 
     fields: dict = card.fields_json
 
-    # Block if any required field is missing or still flagged
     for field_name in REQUIRED_FIELDS:
         field = fields.get(field_name, {})
         if not field.get("value") or field.get("flagged"):
@@ -119,7 +131,7 @@ def confirm_card(card_id: uuid.UUID, db: Session = Depends(get_db)):
         company=fields["company"]["value"],
         email=fields["email"]["value"],
         phone=fields.get("phone", {}).get("value"),
-        title=fields.get("title", {}).get("value"),
+        title=fields.get("job_title", {}).get("value"),   # DB column is 'title'
         address=fields.get("address", {}).get("value"),
     )
     db.add(customer)

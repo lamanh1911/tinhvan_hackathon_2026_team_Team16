@@ -8,6 +8,9 @@ export default function CardsPage() {
   const router = useRouter()
 
   function handleScanComplete(card: CardScanResponse) {
+    console.log('[STEP 2] setState — card received from scan:', JSON.stringify(card, null, 2))
+    console.log('[STEP 2] fields keys:', Object.keys(card.fields))
+    console.log('[STEP 2] navigating to /cards/' + card.id)
     router.push(`/cards/${card.id}`)
   }
 

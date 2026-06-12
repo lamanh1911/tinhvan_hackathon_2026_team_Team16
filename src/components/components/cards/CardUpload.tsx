@@ -27,6 +27,7 @@ export function CardUpload({ onScanComplete }: CardUploadProps) {
         const form = new FormData()
         form.append('file', file)
         const card = await api.postForm<CardScanResponse>('/cards/scan', form)
+        console.log('[STEP 1] scan API response:', JSON.stringify(card, null, 2))
         onScanComplete(card)
       } catch (err) {
         setError(
