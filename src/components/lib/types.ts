@@ -131,3 +131,25 @@ export interface Member {
   email: string
   role: MemberRole
 }
+
+export interface AttendeeSlotStatus {
+  name: string
+  email: string
+  status: 'free' | 'busy'
+}
+
+export interface SlotProposal {
+  index: number
+  start: string
+  end: string
+  attendees: AttendeeSlotStatus[]
+}
+
+export interface ScheduleProposal {
+  id: string
+  status: 'draft' | 'approved'
+  slots: SlotProposal[]
+  approved_slot_index: number | null
+  customer_id: string | null
+  created_at: string
+}

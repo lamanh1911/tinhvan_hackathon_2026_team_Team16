@@ -3,10 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.config import get_settings
 from src.api.exceptions import AppError, app_error_handler
-from src.api.routers import health
-from src.api.routers import cards
-from src.api.routers import meetings
-from src.api.routers import emails
+from src.api.routers import cards, emails, health, meetings, schedule
 
 settings = get_settings()
 
@@ -31,3 +28,4 @@ app.include_router(health.router)
 app.include_router(cards.router)
 app.include_router(meetings.router)
 app.include_router(emails.router)
+app.include_router(schedule.router)
