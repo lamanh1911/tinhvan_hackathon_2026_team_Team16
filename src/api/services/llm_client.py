@@ -7,27 +7,57 @@ import httpx
 
 from src.api.exceptions import integration_error
 
-_EXTRACTION_PROMPT = """You are a business card OCR assistant.
-Look at this business card image carefully and extract all text and fields.
+_CARD_VALIDATION_PROMPT = """You are a business card validator and OCR extractor.
 
-Return ONLY valid JSON with this exact structure:
+Step 1 — Is this a business card (name card / visiting card)?
+A valid business card contains: person name, company name, job title/role, and at least one contact method (email, phone, website, or address), with a business-style layout.
+If YES → skip to Step 3.
+
+Step 2 — Is this a different type of card?
+Check if the image is any of the following non-business cards:
+- Bank card, credit card, debit card (16-digit card number, Visa/Mastercard/JCB/AMEX logo)
+- Loyalty card, membership card, points card, reward card
+- Gift card, prepaid card, store card
+- ID card, driver's license, passport, employee badge
+If YES → return IMMEDIATELY:
 {
-  "raw_text": "full verbatim text from the card",
-  "name":      {"value": string|null, "confidence": float},
-  "company":   {"value": string|null, "confidence": float},
-  "job_title": {"value": string|null, "confidence": float},
-  "email":     {"value": string|null, "confidence": float},
-  "phone":     {"value": string|null, "confidence": float},
-  "address":   {"value": string|null, "confidence": float},
-  "website":   {"value": string|null, "confidence": float}
+  "is_valid_card": false,
+  "error_code": "WRONG_CARD_TYPE",
+  "error_message": "Uploaded image appears to be a bank card or membership card, not a business card",
+  "fields": null
 }
 
+If the image is something else entirely (selfie, photo, landscape, food, receipt, invoice, blank, handwritten memo, unrelated document) → return IMMEDIATELY:
+{
+  "is_valid_card": false,
+  "error_code": "INVALID_CARD_TYPE",
+  "error_message": "Uploaded image is not a valid business card",
+  "fields": null
+}
+
+Step 3 — Extract fields from the business card.
 Rules:
-- confidence is 0.0–1.0 reflecting how certain you are
-- Set value to null and confidence to 0.0 if a field is not found
-- For phone: include country code if visible
-- For website: include domain only (strip http/https)
-- raw_text: copy all visible text exactly as it appears"""
+- Do not hallucinate — extract only visible text
+- Return null for any field you cannot read with reasonable certainty
+- confidence is 0.0–1.0 reflecting certainty
+
+Return this exact JSON:
+{
+  "is_valid_card": true,
+  "error_code": null,
+  "error_message": null,
+  "fields": {
+    "name":      {"value": "string|null", "confidence": 0.0},
+    "company":   {"value": "string|null", "confidence": 0.0},
+    "email":     {"value": "string|null", "confidence": 0.0},
+    "phone":     {"value": "string|null", "confidence": 0.0},
+    "job_title": {"value": "string|null", "confidence": 0.0},
+    "address":   {"value": "string|null", "confidence": 0.0},
+    "website":   {"value": "string|null", "confidence": 0.0}
+  }
+}
+
+Return JSON only. No markdown. No explanation."""
 
 _MOM_SYSTEM_PROMPT = """You are a meeting-minutes assistant.
 Read the meeting transcript and return ONLY valid JSON with this structure:
@@ -60,7 +90,6 @@ Rules:
 - Generate the email in the same language as the meeting minutes."""
 
 _MOCK_FIELDS: dict = {
-    "raw_text": "Nguyen Van A\nSales Manager\nABC Corporation\nEmail: nva@abc.com\nTel: 090-1234-567\nwww.abc.com",
     "name":      {"value": "Nguyen Van A",    "confidence": 0.95},
     "company":   {"value": "ABC Corporation", "confidence": 0.92},
     "job_title": {"value": "Sales Manager",   "confidence": 0.88},
@@ -119,11 +148,17 @@ def _parse_json_content(content: str) -> dict:
 
 
 class LLMClientProtocol(Protocol):
-    """Card scanning — single-call OCR + field extraction from an image."""
+    """Card scanning — single-call validation + field extraction from an image."""
 
-    async def extract_from_image(
-        self, image_bytes: bytes, content_type: str
-    ) -> tuple[str, dict]: ...
+    async def extract_from_image(self, image_bytes: bytes, content_type: str) -> dict:
+        """
+        Returns dict with keys:
+          is_valid_card: bool
+          error_code: str | None
+          error_message: str | None
+          fields: dict | None  — None when is_valid_card is False
+        """
+        ...
 
 
 class TextLLMClientProtocol(Protocol):
@@ -134,12 +169,13 @@ class TextLLMClientProtocol(Protocol):
 
 
 class MockLLMClient:
-    async def extract_from_image(
-        self, image_bytes: bytes, content_type: str
-    ) -> tuple[str, dict]:
-        raw_text = _MOCK_FIELDS["raw_text"]
-        fields = {k: v for k, v in _MOCK_FIELDS.items() if k != "raw_text"}
-        return raw_text, fields
+    async def extract_from_image(self, image_bytes: bytes, content_type: str) -> dict:
+        return {
+            "is_valid_card": True,
+            "error_code": None,
+            "error_message": None,
+            "fields": dict(_MOCK_FIELDS),
+        }
 
     async def summarize_transcript(self, transcript_text: str) -> dict:
         return dict(_MOCK_MOM)
@@ -149,7 +185,7 @@ class MockLLMClient:
 
 
 class GeminiVisionClient:
-    """Single-call OCR + field extraction via vision model on OpenRouter."""
+    """Single-call card validation + field extraction via vision model on OpenRouter."""
 
     _BASE_URL = "https://openrouter.ai/api/v1/chat/completions"
 
@@ -157,9 +193,7 @@ class GeminiVisionClient:
         self._api_key = api_key
         self._model = model
 
-    async def extract_from_image(
-        self, image_bytes: bytes, content_type: str
-    ) -> tuple[str, dict]:
+    async def extract_from_image(self, image_bytes: bytes, content_type: str) -> dict:
         encoded = base64.b64encode(image_bytes).decode()
         data_url = f"data:{content_type};base64,{encoded}"
 
@@ -183,7 +217,7 @@ class GeminiVisionClient:
                                 },
                                 {
                                     "type": "text",
-                                    "text": _EXTRACTION_PROMPT,
+                                    "text": _CARD_VALIDATION_PROMPT,
                                 },
                             ],
                         }
@@ -193,10 +227,7 @@ class GeminiVisionClient:
             )
             resp.raise_for_status()
             content = resp.json()["choices"][0]["message"]["content"]
-            data = json.loads(content)
-
-        raw_text: str = data.pop("raw_text", "")
-        return raw_text, data
+            return json.loads(content)
 
 
 class OpenRouterLLMClient:

@@ -13,6 +13,7 @@ Verify that implementations meet the acceptance criteria defined in the requirem
 
 - `docs/requirements/functional-requirements.md`
 - `docs/requirements/non-functional-requirements.md`
+- `.claude/skills/ui-designer/references/screens.md` — screen UX flows to derive E2E test scenarios from
 - `docs/context/business-rules.md`
 
 ## Skills

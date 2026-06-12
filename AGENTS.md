@@ -58,6 +58,7 @@ All agents for AI Sales Follow-up Assistant. Each agent has a defined scope and 
 
 | Skill | Purpose |
 |---|---|
+| `ui-designer` | Project-specific design system, component patterns, screen UX flows for all features |
 | `find-skills` | Discover additional skills as needed |
 | `skill-creator` | Create custom skills for project-specific patterns |
 | `supabase-postgres-best-practices` | PostgreSQL patterns for database-engineer |

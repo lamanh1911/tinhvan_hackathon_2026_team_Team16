@@ -1,5 +1,6 @@
 import logging
 
+from src.api.exceptions import AppError
 from src.api.schemas.cards import CONFIDENCE_THRESHOLD
 from src.api.services.llm_client import LLMClientProtocol
 from src.api.services.storage_client import StorageClientProtocol, make_card_key
@@ -43,22 +44,29 @@ class CardScannerService:
         self._llm = llm
 
     async def scan(self, image_bytes: bytes, filename: str, content_type: str = "image/jpeg") -> dict:
-        logger.info("[scan] file received: %s (%d bytes)", filename, len(image_bytes))
+        logger.info("[scan] received: %s (%d bytes)", filename, len(image_bytes))
+
+        result = await self._llm.extract_from_image(image_bytes, content_type)
+
+        if result.get("is_valid_card") is not True:
+            raise AppError(
+                422,
+                result.get("error_code") or "INVALID_CARD_TYPE",
+                result.get("error_message") or "Uploaded image is not a valid business card",
+            )
 
         key = make_card_key(filename)
         image_ref = await self._storage.upload(key, image_bytes, content_type)
 
-        ocr_text, raw_fields = await self._llm.extract_from_image(image_bytes, content_type)
-        logger.info("[scan] OCR raw text:\n%s", ocr_text)
-        logger.info("[scan] extracted JSON: %s", raw_fields)
+        raw_fields: dict = result.get("fields") or {}
+        logger.info("[scan] fields extracted: %s", list(raw_fields.keys()))
 
         fields = _build_fields(raw_fields)
         is_valid_card, error_message = _compute_validity(fields)
-        logger.info("[scan] is_valid_card=%s error_message=%s", is_valid_card, error_message)
 
         return {
             "image_ref": image_ref,
-            "raw_ocr_text": ocr_text,
+            "raw_ocr_text": "",
             "fields": fields,
             "is_valid_card": is_valid_card,
             "error_message": error_message,
