@@ -17,7 +17,7 @@ from src.api.schemas.cards import (
     CardFields,
     CardScanResponse,
 )
-from src.api.services.card_scanner import _CARD_TYPE_MESSAGES, _compute_validity, make_card_scanner
+from src.api.services.card_scanner import _compute_validity, make_card_scanner
 
 logger = logging.getLogger(__name__)
 
@@ -35,24 +35,10 @@ def _fields_to_schema(fields_json: dict) -> CardFields:
 
 def _card_to_response(card: BusinessCard) -> CardScanResponse:
     fields_json: dict = card.fields_json or {}
-    card_type: str = card.card_type or "business_card"
-
-    if card_type != "business_card":
-        return CardScanResponse(
-            id=card.id,
-            status=card.status,
-            card_type=card_type,
-            fields=_fields_to_schema(fields_json),
-            is_valid_card=False,
-            error_message=_CARD_TYPE_MESSAGES.get(card_type, _CARD_TYPE_MESSAGES["other"]),
-            created_at=card.created_at,
-        )
-
     is_valid_card, error_message = _compute_validity(fields_json)
     return CardScanResponse(
         id=card.id,
         status=card.status,
-        card_type=card_type,
         fields=_fields_to_schema(fields_json),
         is_valid_card=is_valid_card,
         error_message=error_message,
@@ -74,21 +60,21 @@ async def scan_card(
         content_type=file.content_type or "image/jpeg",
     )
 
-    card_type: str = result["card_type"]
-    logger.info("[scan_card] card_type=%s is_valid_card=%s", card_type, result["is_valid_card"])
+    logger.info("[scan_card] scan result fields: %s", list(result["fields"].keys()))
 
     card = BusinessCard(
         image_ref=result["image_ref"],
         raw_ocr_text=result["raw_ocr_text"],
-        card_type=card_type,
         fields_json=result["fields"],
-        status="rejected" if card_type != "business_card" else "pending",
+        status="pending",
     )
     db.add(card)
     db.commit()
     db.refresh(card)
 
-    return _card_to_response(card)
+    response = _card_to_response(card)
+    logger.info("[scan_card] response id=%s is_valid_card=%s", card.id, response.is_valid_card)
+    return response
 
 
 @router.get("/{card_id}", response_model=CardScanResponse)
@@ -110,8 +96,6 @@ def update_card_fields(
         raise not_found("Business card")
     if card.status == "confirmed":
         raise invalid_status("Cannot edit a confirmed card")
-    if card.card_type and card.card_type != "business_card":
-        raise invalid_status("Cannot edit a rejected card")
 
     fields: dict = dict(card.fields_json)
     for field_name, new_value in body.model_dump(exclude_none=True).items():
@@ -136,8 +120,6 @@ def confirm_card(card_id: uuid.UUID, db: Session = Depends(get_db)):
         raise not_found("Business card")
     if card.status == "confirmed":
         raise invalid_status("Card is already confirmed")
-    if card.card_type and card.card_type != "business_card":
-        raise invalid_status("Cannot confirm a rejected card")
 
     fields: dict = card.fields_json
 
@@ -153,7 +135,7 @@ def confirm_card(card_id: uuid.UUID, db: Session = Depends(get_db)):
         company=fields["company"]["value"],
         email=fields["email"]["value"],
         phone=fields.get("phone", {}).get("value"),
-        title=fields.get("job_title", {}).get("value"),
+        title=fields.get("job_title", {}).get("value"),   # DB column is 'title'
         address=fields.get("address", {}).get("value"),
     )
     db.add(customer)

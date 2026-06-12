@@ -44,9 +44,6 @@ export default function CardReviewPage() {
     setFetchError(null)
     try {
       const data = await api.get<CardScanResponse>(`/cards/${cardId}`)
-      console.log('[CardReview] fetchCard response:', data)
-      console.log('[CardReview] fields:', data.fields)
-      console.log('[CardReview] is_valid_card:', data.is_valid_card, '| error_message:', data.error_message)
       setCard(data)
     } catch (err) {
       setFetchError(
@@ -65,7 +62,6 @@ export default function CardReviewPage() {
     const updated = await api.patch<CardScanResponse>(`/cards/${cardId}`, {
       [fieldName]: value,
     })
-    console.log('[CardReview] after field save:', updated)
     setCard(updated)
   }
 

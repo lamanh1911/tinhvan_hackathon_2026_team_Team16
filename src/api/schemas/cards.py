@@ -26,7 +26,6 @@ class CardFields(BaseModel):
 class CardScanResponse(BaseModel):
     id: uuid.UUID
     status: str
-    card_type: str
     fields: CardFields
     is_valid_card: bool
     error_message: str | None

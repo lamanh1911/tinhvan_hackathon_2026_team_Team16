@@ -24,8 +24,6 @@ export function CardFieldEditor({
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
 
-  console.log(`[STEP 3] confirm screen — field "${fieldName}": value=${JSON.stringify(field.value)} confidence=${field.confidence} flagged=${field.flagged}`)
-
   // Sync input value when prop changes from parent (e.g. after patch response)
   useEffect(() => {
     if (!editing) {

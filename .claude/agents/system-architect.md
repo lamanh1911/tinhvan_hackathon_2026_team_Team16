@@ -13,6 +13,7 @@ Design the technical architecture for the system. Ensure all components work tog
 
 - `docs/requirements/PRD.md`
 - `docs/architecture/system-overview.md`
+- `docs/requirements/designs/` — UI design exports (reference when designing API contracts that serve UI needs)
 - `docs/architecture/api-design.md`
 - `docs/architecture/database-design.md`
 - `docs/architecture/deployment-architecture.md`

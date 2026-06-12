@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useRef, useState } from 'react'
-import { CloudArrowUpIcon } from '@heroicons/react/24/outline'
+import { CloudArrowUpIcon, ExclamationCircleIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { api, ApiRequestError } from '@/lib/api-client'
 import type { CardScanResponse } from '@/lib/types'
 
@@ -9,41 +9,45 @@ interface CardUploadProps {
   onScanComplete: (card: CardScanResponse) => void
 }
 
+const ERROR_TITLES: Record<string, string> = {
+  WRONG_CARD_TYPE: 'Wrong card type',
+  INVALID_CARD_TYPE: 'Not a business card',
+}
+
 export function CardUpload({ onScanComplete }: CardUploadProps) {
   const [dragging, setDragging] = useState(false)
   const [scanning, setScanning] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [errorCode, setErrorCode] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  function clearError() {
+    setError(null)
+    setErrorCode(null)
+  }
 
   const handleFile = useCallback(
     async (file: File) => {
       if (!file.type.startsWith('image/')) {
         setError('Please upload an image file (JPG, PNG, etc.)')
+        setErrorCode(null)
         return
       }
-      setError(null)
+      clearError()
       setScanning(true)
       try {
         const form = new FormData()
         form.append('file', file)
         const card = await api.postForm<CardScanResponse>('/cards/scan', form)
-        console.log('[STEP 1] scan API response:', JSON.stringify(card, null, 2))
-
-        if (card.card_type !== 'business_card') {
-          setError(
-            card.error_message ??
-              'This does not appear to be a business card. Please upload a contact or business card.',
-          )
-          return
-        }
-
         onScanComplete(card)
       } catch (err) {
-        setError(
-          err instanceof ApiRequestError
-            ? err.message
-            : 'Scan failed. Please try again.',
-        )
+        if (err instanceof ApiRequestError) {
+          setErrorCode(err.code)
+          setError(err.message)
+        } else {
+          setErrorCode(null)
+          setError('Scan failed. Please try again.')
+        }
       } finally {
         setScanning(false)
       }
@@ -68,7 +72,7 @@ export function CardUpload({ onScanComplete }: CardUploadProps) {
   }
 
   return (
-    <div className="max-w-lg">
+    <div className="max-w-lg space-y-4">
       <div
         onDragOver={(e) => {
           e.preventDefault()
@@ -120,7 +124,30 @@ export function CardUpload({ onScanComplete }: CardUploadProps) {
       />
 
       {error && (
-        <p className="mt-3 text-sm text-red-600 text-center">{error}</p>
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+          <div className="flex items-start gap-3">
+            <ExclamationCircleIcon className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-red-800">
+                {ERROR_TITLES[errorCode ?? ''] ?? 'Upload failed'}
+              </p>
+              <p className="text-sm text-red-700 mt-0.5">{error}</p>
+              {(errorCode === 'WRONG_CARD_TYPE' || errorCode === 'INVALID_CARD_TYPE') && (
+                <p className="text-xs text-red-600 mt-2">
+                  Please upload a business card (name card / visiting card) only.
+                </p>
+              )}
+            </div>
+            <button
+              type="button"
+              aria-label="Dismiss error"
+              onClick={clearError}
+              className="shrink-0 text-red-400 hover:text-red-600 transition-colors duration-150"
+            >
+              <XMarkIcon className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
       )}
     </div>
   )
