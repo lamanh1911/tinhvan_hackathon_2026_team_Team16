@@ -7,70 +7,89 @@ import httpx
 
 from src.api.exceptions import integration_error
 
-_CARD_VALIDATION_PROMPT = """You are a business card scanner assistant.
+_CARD_VALIDATION_PROMPT = """You are a business card validation assistant.
 
-DECISION: Is this image a clear, readable BUSINESS CARD (name card / visiting card)?
+Analyze the uploaded image and determine whether it is a valid business card/name card.
 
-Apply these rules strictly — do not guess:
-- Return YES only if the image clearly shows ALL of: person name, job title or position, company or organisation name, and at least one contact method (email, phone, website, or address).
-- Return NO if you are not certain, if the image is blurry or unreadable, or if it is clearly not a business card.
-
----
-
-If YES (it is a clear business card) → extract fields and return:
+Return JSON only with this schema:
 {
-  "is_valid_card": true,
-  "error_code": null,
-  "error_message": null,
-  "fields": {
-    "name":      {"value": "...", "confidence": 0.0},
-    "company":   {"value": "...", "confidence": 0.0},
-    "email":     {"value": "...", "confidence": 0.0},
-    "phone":     {"value": "...", "confidence": 0.0},
-    "job_title": {"value": "...", "confidence": 0.0},
-    "address":   {"value": "...", "confidence": 0.0},
-    "website":   {"value": "...", "confidence": 0.0}
-  }
-}
-Field rules: extract only clearly visible text; set value to null and confidence to 0.0 for any field not found.
-
----
-
-If NO → identify the reason and return one of these:
-
-Image is a BANK CARD, CREDIT CARD, DEBIT CARD, or ATM CARD (has card number, bank logo, Visa/Mastercard/JCB/AMEX):
-{
-  "is_valid_card": false,
-  "error_code": "WRONG_CARD_TYPE",
-  "error_message": "This appears to be a bank or payment card, not a business card. Please upload a name card or contact card.",
-  "fields": null
+  "is_business_card": true/false,
+  "confidence": 0-1,
+  "quality": {
+    "readable": true/false,
+    "issues": []
+  },
+  "extracted_fields": {
+    "person_name": "",
+    "company_name": "",
+    "job_title": "",
+    "email": "",
+    "phone": "",
+    "website": "",
+    "address": ""
+  },
+  "validation": {
+    "has_identity": true/false,
+    "has_contact_info": true/false,
+    "valid_email_format": true/false,
+    "valid_phone_format": true/false
+  },
+  "decision": "valid | invalid | unclear",
+  "reasons": []
 }
 
-Image is a MEMBERSHIP CARD, LOYALTY CARD, SHOPPING CARD, GIFT CARD, STUDENT CARD, or ID CARD:
-{
-  "is_valid_card": false,
-  "error_code": "WRONG_CARD_TYPE",
-  "error_message": "This appears to be a membership, student, or identity card, not a business card. Please upload a name card or contact card.",
-  "fields": null
-}
-
-Image is BLURRY, TOO DARK, OVER-EXPOSED, or otherwise UNREADABLE (cannot identify card type or read text):
-{
-  "is_valid_card": false,
-  "error_code": "POOR_QUALITY",
-  "error_message": "The image is too blurry or unclear to read. Please take a clearer photo in good lighting.",
-  "fields": null
-}
-
-Image is anything else (photo, selfie, receipt, document, screenshot, food, landscape, etc.):
-{
-  "is_valid_card": false,
-  "error_code": "INVALID_CARD_TYPE",
-  "error_message": "This does not appear to be a business card. Please upload a name card or contact card.",
-  "fields": null
-}
+Rules:
+- A valid business card must contain identity information and at least one contact method.
+- If the image is too blurry, cropped, dark, or text is unreadable, return "unclear".
+- Do not guess missing fields.
 
 Return JSON only. No markdown fences. No explanation outside the JSON."""
+
+
+_WRONG_CARD_KEYWORDS = frozenset({
+    "bank", "credit", "debit", "atm", "visa", "mastercard", "jcb", "amex",
+    "membership", "member", "loyalty", "student", "id card", "identity",
+    "gift card", "shopping card",
+})
+
+
+def _map_new_schema(raw: dict) -> dict:
+    """Convert new LLM validation schema to the internal {is_valid_card, error_code, error_message, fields} format."""
+    decision = (raw.get("decision") or "invalid").strip().lower()
+    confidence: float = float(raw.get("confidence") or 0.0)
+
+    if decision == "valid":
+        ef = raw.get("extracted_fields") or {}
+        fields = {
+            "name":      {"value": ef.get("person_name") or None,  "confidence": confidence},
+            "company":   {"value": ef.get("company_name") or None,  "confidence": confidence},
+            "job_title": {"value": ef.get("job_title") or None,     "confidence": confidence},
+            "email":     {"value": ef.get("email") or None,         "confidence": confidence},
+            "phone":     {"value": ef.get("phone") or None,         "confidence": confidence},
+            "address":   {"value": ef.get("address") or None,       "confidence": confidence},
+            "website":   {"value": ef.get("website") or None,       "confidence": confidence},
+        }
+        # Treat empty strings as None
+        for f in fields.values():
+            if f["value"] == "":
+                f["value"] = None
+        return {"is_valid_card": True, "error_code": None, "error_message": None, "fields": fields}
+
+    if decision == "unclear":
+        reasons = raw.get("reasons") or []
+        msg = reasons[0] if reasons else "The image is too blurry or unclear to read. Please take a clearer photo in good lighting."
+        return {"is_valid_card": False, "error_code": "POOR_QUALITY", "error_message": msg, "fields": None}
+
+    # decision == "invalid"
+    reasons = raw.get("reasons") or []
+    reasons_text = " ".join(reasons).lower()
+    if any(kw in reasons_text for kw in _WRONG_CARD_KEYWORDS):
+        code = "WRONG_CARD_TYPE"
+        msg = reasons[0] if reasons else "This appears to be a bank, membership, or identity card. Please upload a business card or name card."
+    else:
+        code = "INVALID_CARD_TYPE"
+        msg = reasons[0] if reasons else "This does not appear to be a business card. Please upload a name card or contact card."
+    return {"is_valid_card": False, "error_code": code, "error_message": msg, "fields": None}
 
 _MOM_SYSTEM_PROMPT = """You are a meeting-minutes assistant.
 Read the meeting transcript and return ONLY valid JSON with this structure:
@@ -240,7 +259,8 @@ class GeminiVisionClient:
             )
             resp.raise_for_status()
             content = resp.json()["choices"][0]["message"]["content"]
-            return _parse_json_content(content)
+            raw = _parse_json_content(content)
+            return _map_new_schema(raw)
 
 
 class OpenRouterLLMClient:
