@@ -17,7 +17,7 @@ All AI outputs are drafts. Humans review before anything is sent.
 
 ## Demo
 
-- **Video demo:** [Video Demo.mp4](https://tinhvan-my.sharepoint.com/personal/trangnth2_tinhvan_com/_layouts/15/stream.aspx?id=%2Fpersonal%2Ftrangnth2%5Ftinhvan%5Fcom%2FDocuments%2FVideo%20Demo%2Emp4&ga=1&referrer=StreamWebApp%2EWeb&referrerScenario=AddressBarCopied%2Eview%2E6477dd77%2Ddd37%2D4df1%2Da70e%2D5be4818748df)
+- **Video demo:** [Video Demo](https://tinhvan-my.sharepoint.com/:v:/p/trangnth2/IQAh3VMQC70eQ4aHvddTXFfLAaIOP71i6bnQhKsgtSK6mUU?e=bXI9vc)
 - **Live app:** https://valiant-harmony-production-36ad.up.railway.app
 
 ## Stack
