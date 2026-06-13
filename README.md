@@ -15,6 +15,11 @@ Automates post-networking and post-meeting workflows for sales teams.
 
 All AI outputs are drafts. Humans review before anything is sent.
 
+## Demo
+
+- **Video demo:** [Video Demo.mp4](https://tinhvan-my.sharepoint.com/personal/trangnth2_tinhvan_com/_layouts/15/stream.aspx?id=%2Fpersonal%2Ftrangnth2%5Ftinhvan%5Fcom%2FDocuments%2FVideo%20Demo%2Emp4&ga=1&referrer=StreamWebApp%2EWeb&referrerScenario=AddressBarCopied%2Eview%2E6477dd77%2Ddd37%2D4df1%2Da70e%2D5be4818748df)
+- **Live app:** https://valiant-harmony-production-36ad.up.railway.app
+
 ## Stack
 
 - **Frontend:** Next.js 14 App Router, TypeScript, Tailwind CSS
@@ -40,7 +45,9 @@ uvicorn main:app --reload
 
 ## Docs
 
+- [Project Structure](docs/project-structure.md)
 - [Requirements](docs/requirements/PRD.md)
 - [Architecture](docs/architecture/system-overview.md)
 - [Backlog](docs/tasks/backlog.md)
 - [Domain Glossary](docs/context/domain-glossary.md)
+- [Prompt History](prompt-history.md) · [Prompt History Report](prompt-history-report.md)
